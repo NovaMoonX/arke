@@ -37,3 +37,9 @@ html, body {
   transition: height 0.3s ease;
 }
 
+/* Dreamer UI styles */
+@import "@moondreamsdev/dreamer-ui/styles"; /* non-TailwindCSS styles */
+@import './dreamer-ui.css'; /* customizable, theme styles */
+
+/* for TailwindCSS styles in library to be processed */
+@source "../node_modules/@moondreamsdev/dreamer-ui/dist/**/*.{js,jsx,ts,tsx}";

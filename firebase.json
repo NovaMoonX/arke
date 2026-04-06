@@ -14,8 +14,6 @@
     ]
   },
   "database": {
-    // NOTE: These rules rely on Firebase Authentication (to be configured in a later phase).
-    // Access is restricted to authenticated participants who are members of a session.
     "rules": {
       "sessions": {
         "$sessionId": {
