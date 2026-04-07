@@ -1,13 +1,19 @@
-import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { APP_TITLE, APP_DESCRIPTION } from '@lib/app';
+import { SessionManager } from '@components/SessionManager';
 
 function Home() {
 	return (
 		<div className='page flex flex-col items-center justify-center'>
-			<div className='text-center space-y-6 max-w-2xl px-4'>
-				<h1 className='text-5xl md:text-6xl font-bold'>{APP_TITLE}</h1>
-				<p className='text-lg md:text-xl text-foreground/80'>{APP_DESCRIPTION}</p>
-				<Button href='/about'>Learn More</Button>
+			<div className='w-full max-w-md space-y-8 px-4 text-center'>
+				<div className='space-y-2'>
+					<h1 className='text-5xl font-bold md:text-6xl'>{APP_TITLE}</h1>
+					{APP_DESCRIPTION && (
+						<p className='text-lg text-foreground/80 md:text-xl'>
+							{APP_DESCRIPTION}
+						</p>
+					)}
+				</div>
+				<SessionManager />
 			</div>
 		</div>
 	);
