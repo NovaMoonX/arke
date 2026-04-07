@@ -22,6 +22,15 @@ export const router = createBrowserRouter([
           return { Component: About };
         },
       },
+      // Join session by PIN (lazy loaded)
+      {
+        path: 'join/:pin',
+        HydrateFallback: Loading,
+        lazy: async () => {
+          const { default: Join } = await import('@screens/Join');
+          return { Component: Join };
+        },
+      },
     ],
   },
 ]);
