@@ -141,7 +141,7 @@ export function useSession(): UseSessionReturn {
 
   const createSession = useCallback(async () => {
     if (!database) {
-      setError('Database not configured. Please check Firebase settings.');
+      setError('Unable to reach database');
       return;
     }
     if (!userId) {
@@ -191,7 +191,7 @@ export function useSession(): UseSessionReturn {
   const joinSession = useCallback(
     async (pin: string) => {
       if (!database) {
-        setError('Database not configured. Please check Firebase settings.');
+        setError('Unable to reach database');
         return;
       }
       if (!userId) {

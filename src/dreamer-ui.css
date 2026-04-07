@@ -25,3 +25,29 @@
   --color-tooltip: var(--color-slate-100);
   --color-tooltip-foreground: var(--color-slate-900);
 }
+
+.dark {
+  --color-primary: var(--color-violet-300);
+  --color-primary-foreground: var(--color-slate-950);
+  --color-secondary: var(--color-violet-900);
+  --color-secondary-foreground: var(--color-violet-100);
+  --color-muted: var(--color-slate-800);
+  --color-muted-foreground: var(--color-slate-200);
+
+  --color-accent: var(--color-violet-400);
+  --color-accent-foreground: var(--color-slate-950);
+
+  --color-success: var(--color-green-400);
+  --color-success-foreground: var(--color-slate-950);
+  --color-warning: var(--color-yellow-400);
+  --color-warning-foreground: var(--color-slate-950);
+  --color-destructive: var(--color-red-400);
+  --color-destructive-foreground: var(--color-slate-950);
+
+  --color-border: var(--color-slate-700);
+  --color-popover: var(--color-slate-900);
+  --color-popover-foreground: var(--color-slate-100);
+
+  --color-tooltip: var(--color-slate-200);
+  --color-tooltip-foreground: var(--color-slate-950);
+}
