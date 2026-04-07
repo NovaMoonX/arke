@@ -140,8 +140,12 @@ export function useSession(): UseSessionReturn {
   );
 
   const createSession = useCallback(async () => {
-    if (!userId || !database) {
-      setError('Not authenticated');
+    if (!database) {
+      setError('Database not configured. Please check Firebase settings.');
+      return;
+    }
+    if (!userId) {
+      setError('Not authenticated. Please try refreshing the page.');
       return;
     }
 
@@ -186,8 +190,12 @@ export function useSession(): UseSessionReturn {
 
   const joinSession = useCallback(
     async (pin: string) => {
-      if (!userId || !database) {
-        setError('Not authenticated');
+      if (!database) {
+        setError('Database not configured. Please check Firebase settings.');
+        return;
+      }
+      if (!userId) {
+        setError('Not authenticated. Please try refreshing the page.');
         return;
       }
 

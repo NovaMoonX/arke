@@ -21,8 +21,14 @@ let storage: FirebaseStorage | null = null;
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  database = getDatabase(app);
-  storage = getStorage(app);
+
+  if (firebaseConfig.databaseURL) {
+    database = getDatabase(app);
+  }
+
+  if (firebaseConfig.storageBucket) {
+    storage = getStorage(app);
+  }
 } catch {
   // Firebase initialization failed - likely missing config
 }

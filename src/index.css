@@ -18,6 +18,12 @@
 	--color-foreground: var(--color-slate-100);
 }
 
+/* Placeholder color for dark mode */
+.dark input::placeholder,
+.dark textarea::placeholder {
+	color: var(--color-slate-400);
+}
+
 #root {
   @apply page bg-background text-foreground;
 }
