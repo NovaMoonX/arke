@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Join() {
@@ -34,12 +35,12 @@ function Join() {
         {error && (
           <div className='space-y-4'>
             <p className='text-lg font-medium text-destructive'>{error}</p>
-            <button
+            <Button
               onClick={() => navigate('/', { replace: true })}
-              className='text-accent underline hover:text-accent/80'
+              variant='secondary'
             >
               Go to Home
-            </button>
+            </Button>
           </div>
         )}
       </div>

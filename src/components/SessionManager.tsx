@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Modal } from '@moondreamsdev/dreamer-ui/components';
+import { Button, Input, Modal, Callout } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { QRDisplay } from '@components/QRDisplay';
@@ -44,18 +44,21 @@ export function SessionManager({ className }: SessionManagerProps) {
     return (
       <div className={join('space-y-6', className)}>
         {/* Session Status */}
-        <div className='rounded-xl border border-success/30 bg-success/10 p-4 text-center'>
-          <p className='text-sm font-medium text-success'>
-            ● Connected
-          </p>
-          <p className='mt-1 font-mono text-lg font-bold tracking-widest'>
-            PIN: {session.pin}
-          </p>
-          <p className='mt-1 text-sm text-foreground/60'>
-            {participants.length}{' '}
-            {participants.length === 1 ? 'device' : 'devices'} connected
-          </p>
-        </div>
+        <Callout
+          variant='success'
+          description={
+            <div className='text-center'>
+              <p className='text-sm font-medium'>● Connected</p>
+              <p className='mt-1 font-mono text-lg font-bold tracking-widest'>
+                PIN: {session.pin}
+              </p>
+              <p className='mt-1 text-sm opacity-60'>
+                {participants.length}{' '}
+                {participants.length === 1 ? 'device' : 'devices'} connected
+              </p>
+            </div>
+          }
+        />
 
         {/* QR Modal for host */}
         {isHost && (
@@ -97,9 +100,7 @@ export function SessionManager({ className }: SessionManagerProps) {
     <div className={join('space-y-6', className)}>
       {/* Error Display */}
       {error && (
-        <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-center text-sm text-destructive'>
-          {error}
-        </div>
+        <Callout variant='destructive' description={error} />
       )}
 
       {/* Start Sharing */}

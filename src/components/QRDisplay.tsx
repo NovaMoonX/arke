@@ -15,19 +15,23 @@ export function QRDisplay({ pin, className }: QRDisplayProps) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(pin);
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(pin);
+      } else {
+        // Fallback for environments without Clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = pin;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = pin;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Copy failed silently
     }
   };
 
