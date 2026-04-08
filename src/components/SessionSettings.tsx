@@ -165,5 +165,3 @@ export function SessionSettings({ isOpen, onClose }: SessionSettingsProps) {
     </Modal>
   );
 }
-
-
