@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ref, onValue, type Unsubscribe } from 'firebase/database';
-import { Button, Modal, Callout } from '@moondreamsdev/dreamer-ui/components';
-import { Trash, Download } from '@moondreamsdev/dreamer-ui/symbols';
+import { Button, Callout } from '@moondreamsdev/dreamer-ui/components';
+import { Trash } from '@moondreamsdev/dreamer-ui/symbols';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useSessionContext } from '@hooks/useSessionContext';
-import { useWebShare } from '@hooks/useWebShare';
 import { auth, database } from '@lib/firebase';
 import { deleteMedia, type MediaMetadata } from '@lib/firebase/storage';
 
@@ -14,9 +13,7 @@ interface MediaGalleryProps {
 
 export function MediaGallery({ className }: MediaGalleryProps) {
   const { session } = useSessionContext();
-  const { shareFile } = useWebShare();
   const [items, setItems] = useState<MediaMetadata[]>([]);
-  const [viewItem, setViewItem] = useState<MediaMetadata | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,28 +48,22 @@ export function MediaGallery({ className }: MediaGalleryProps) {
   }, [session]);
 
   const handleDelete = useCallback(
-    async (item: MediaMetadata) => {
+    async (e: React.MouseEvent, item: MediaMetadata) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (!session) return;
 
       setDeleting(item.id);
       setError(null);
       try {
         await deleteMedia(session.pin, item.id, item.storagePath);
-        if (viewItem?.id === item.id) setViewItem(null);
       } catch {
         setError('Failed to delete file.');
       } finally {
         setDeleting(null);
       }
     },
-    [session, viewItem],
-  );
-
-  const handleDownload = useCallback(
-    (item: MediaMetadata) => {
-      shareFile(item.downloadURL, item.fileName);
-    },
-    [shareFile],
+    [session],
   );
 
   const currentUserId = auth?.currentUser?.uid;
@@ -88,80 +79,66 @@ export function MediaGallery({ className }: MediaGalleryProps) {
           No media shared yet.
         </p>
       ) : (
-        <div className='grid grid-cols-3 gap-2'>
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className='group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-foreground/5'
-              onClick={() => setViewItem(item)}
-            >
-              {item.fileType.startsWith('image/') ? (
-                <img
-                  src={item.downloadURL}
-                  alt={item.fileName}
-                  loading='lazy'
-                  className='h-full w-full object-cover transition-transform group-hover:scale-105'
-                />
-              ) : (
-                <div className='flex h-full w-full flex-col items-center justify-center p-2'>
-                  <span className='text-3xl'>📄</span>
-                  <span className='mt-1 truncate text-xs text-foreground/60'>
+        <div className='grid grid-cols-2 gap-3'>
+          {items.map((item) => {
+            const isImage = item.fileType.startsWith('image/');
+            const isPDF = item.fileType === 'application/pdf';
+            const isOwner = currentUserId === item.uploadedBy;
+
+            return (
+              <a
+                key={item.id}
+                href={item.downloadURL}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='group relative overflow-hidden rounded-lg border border-foreground/10 bg-foreground/5'
+              >
+                {/* Preview */}
+                {isImage ? (
+                  <img
+                    src={item.downloadURL}
+                    alt={item.fileName}
+                    loading='lazy'
+                    className='aspect-square w-full object-cover transition-transform group-hover:scale-105'
+                  />
+                ) : isPDF ? (
+                  <div className='aspect-square w-full overflow-hidden'>
+                    <iframe
+                      src={`${item.downloadURL}#toolbar=0&navpanes=0&scrollbar=0`}
+                      title={item.fileName}
+                      className='pointer-events-none h-full w-full scale-100'
+                    />
+                  </div>
+                ) : (
+                  <div className='flex aspect-square w-full flex-col items-center justify-center p-2'>
+                    <span className='text-3xl'>📄</span>
+                  </div>
+                )}
+
+                {/* File name */}
+                <div className='px-2 py-1.5'>
+                  <p className='truncate text-xs text-foreground/70'>
                     {item.fileName}
-                  </span>
+                  </p>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Delete button (owner only) */}
+                {isOwner && (
+                  <Button
+                    size='sm'
+                    variant='destructive'
+                    disabled={deleting === item.id}
+                    onClick={(e) => handleDelete(e, item)}
+                    className='absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100'
+                  >
+                    <Trash className='h-3 w-3' />
+                  </Button>
+                )}
+              </a>
+            );
+          })}
         </div>
       )}
-
-      {/* Full-size viewer modal */}
-      <Modal
-        isOpen={!!viewItem}
-        onClose={() => setViewItem(null)}
-        title={viewItem?.fileName}
-        className='max-w-2xl'
-      >
-        {viewItem && (
-          <div className='space-y-4 p-4'>
-            {viewItem.fileType.startsWith('image/') ? (
-              <img
-                src={viewItem.downloadURL}
-                alt={viewItem.fileName}
-                className='mx-auto max-h-[60vh] rounded-lg object-contain'
-              />
-            ) : (
-              <div className='flex flex-col items-center py-8'>
-                <span className='text-6xl'>📄</span>
-                <p className='mt-2 text-foreground/80'>{viewItem.fileName}</p>
-              </div>
-            )}
-
-            <div className='flex justify-center gap-2'>
-              <Button
-                size='sm'
-                variant='secondary'
-                onClick={() => handleDownload(viewItem)}
-              >
-                <Download className='mr-1 h-4 w-4' />
-                Download
-              </Button>
-
-              {currentUserId === viewItem.uploadedBy && (
-                <Button
-                  size='sm'
-                  variant='destructive'
-                  disabled={deleting === viewItem.id}
-                  onClick={() => handleDelete(viewItem)}
-                >
-                  <Trash className='mr-1 h-4 w-4' />
-                  {deleting === viewItem.id ? 'Deleting…' : 'Delete'}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ref, onValue, type Unsubscribe } from 'firebase/database';
 import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
+import { ExternalLink } from '@moondreamsdev/dreamer-ui/symbols';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { database } from '@lib/firebase';
 import type { MediaMetadata } from '@lib/firebase/storage';
@@ -14,7 +15,7 @@ interface MediaSummaryProps {
 export function MediaSummary({ className }: MediaSummaryProps) {
   const { session } = useSessionContext();
   const navigate = useNavigate();
-  const [items, setItems] = useState<MediaMetadata[]>([]);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (!session || !database) return;
@@ -26,14 +27,14 @@ export function MediaSummary({ className }: MediaSummaryProps) {
       mediaRef,
       (snapshot) => {
         if (!snapshot.exists()) {
-          setItems([]);
+          setCount(0);
           return;
         }
         const data = snapshot.val() as Record<string, MediaMetadata>;
-        setItems(Object.values(data));
+        setCount(Object.keys(data).length);
       },
       () => {
-        setItems([]);
+        setCount(0);
       },
     );
 
@@ -42,39 +43,18 @@ export function MediaSummary({ className }: MediaSummaryProps) {
     };
   }, [session]);
 
-  if (items.length === 0) return null;
-
-  const imageCount = items.filter((i) =>
-    i.fileType.startsWith('image/'),
-  ).length;
-  const pdfCount = items.filter(
-    (i) => i.fileType === 'application/pdf',
-  ).length;
-
-  const parts: string[] = [];
-  if (imageCount > 0) {
-    parts.push(`${imageCount} ${imageCount === 1 ? 'image' : 'images'}`);
-  }
-  if (pdfCount > 0) {
-    parts.push(`${pdfCount} ${pdfCount === 1 ? 'PDF' : 'PDFs'}`);
-  }
-  const summary = `Shared ${parts.join(' and ')}`;
+  if (count === 0) return null;
 
   return (
-    <div
-      className={join(
-        'flex items-center justify-between rounded-lg border border-foreground/10 px-3 py-2',
-        className,
-      )}
-    >
-      <button
+    <div className={join('pb-1', className)}>
+      <Button
+        size='sm'
+        variant='tertiary'
         onClick={() => navigate('/media')}
-        className='text-sm text-primary underline-offset-2 hover:underline'
+        className='w-full text-xs'
       >
-        {summary}
-      </button>
-      <Button size='sm' variant='secondary' onClick={() => navigate('/media')}>
-        View All Media
+        <ExternalLink className='mr-1 h-3 w-3' />
+        View all media ({count})
       </Button>
     </div>
   );

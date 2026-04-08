@@ -5,6 +5,7 @@ import {
   useRef,
   type KeyboardEvent,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Textarea,
   Button,
@@ -13,30 +14,40 @@ import {
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
+import { Plus } from '@moondreamsdev/dreamer-ui/symbols';
 import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
 import { useSessionContext } from '@hooks/useSessionContext';
+import { useMediaUpload } from '@hooks/useMediaUpload';
+import { MAX_FILE_SIZE } from '@lib/firebase/storage';
 
-interface TextMessage {
+interface FeedMessage {
   id: string;
   text: string;
   deviceId: string;
   deviceName: string;
   color: string;
   sentAt: number;
+  /** When present, this is a media message */
+  mediaIds?: string[];
 }
 
 interface TextPortalProps {
   className?: string;
 }
 
+const ACCEPTED_TYPES = 'image/*,application/pdf';
+
 export function TextPortal({ className }: TextPortalProps) {
   const { session, deviceId, deviceName, deviceColor } = useSessionContext();
   const { addToast } = useToast();
+  const navigate = useNavigate();
+  const { uploadMedia, uploading, progress } = useMediaUpload();
   const [draft, setDraft] = useState('');
-  const [messages, setMessages] = useState<TextMessage[]>([]);
+  const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sessionPin = session?.pin;
 
@@ -52,7 +63,7 @@ export function TextPortal({ className }: TextPortalProps) {
         return;
       }
 
-      const raw = snapshot.val() as Record<string, Omit<TextMessage, 'id'>>;
+      const raw = snapshot.val() as Record<string, Omit<FeedMessage, 'id'>>;
       const sorted = Object.entries(raw)
         .map(([key, value]) => ({ id: key, ...value }))
         .sort((a, b) => a.sentAt - b.sentAt);
@@ -100,6 +111,79 @@ export function TextPortal({ className }: TextPortalProps) {
     [handleSend],
   );
 
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0 || !database || !sessionPin || !deviceId)
+        return;
+
+      // Reset input so the same file can be selected again
+      e.target.value = '';
+
+      // Quick client-side size check
+      const validFiles: File[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_FILE_SIZE) {
+          addToast({
+            title: `${file.name} is too large (max 10MB)`,
+            type: 'error',
+          });
+        } else {
+          validFiles.push(file);
+        }
+      }
+      if (validFiles.length === 0) return;
+
+      // Upload each file and collect IDs
+      const mediaIds: string[] = [];
+      for (const file of validFiles) {
+        const id = await uploadMedia(file);
+        if (id) mediaIds.push(id);
+      }
+
+      if (mediaIds.length === 0) return;
+
+      // Build summary text
+      const imageCount = validFiles.filter((f) =>
+        f.type.startsWith('image/'),
+      ).length;
+      const pdfCount = validFiles.filter(
+        (f) => f.type === 'application/pdf',
+      ).length;
+      const parts: string[] = [];
+      if (imageCount > 0) {
+        parts.push(`${imageCount} ${imageCount === 1 ? 'image' : 'images'}`);
+      }
+      if (pdfCount > 0) {
+        parts.push(`${pdfCount} ${pdfCount === 1 ? 'PDF' : 'PDFs'}`);
+      }
+      const summaryText = `Shared ${parts.join(' and ')}`;
+
+      // Post a feed message
+      try {
+        const messagesRef = ref(database, `sessions/${sessionPin}/messages`);
+        await push(messagesRef, {
+          text: summaryText,
+          deviceId,
+          deviceName,
+          color: deviceColor,
+          sentAt: Date.now(),
+          mediaIds,
+        });
+      } catch {
+        addToast({ title: 'Failed to post media message', type: 'error' });
+      }
+    },
+    [
+      sessionPin,
+      deviceId,
+      deviceName,
+      deviceColor,
+      addToast,
+      uploadMedia,
+    ],
+  );
+
   if (!session) return null;
 
   return (
@@ -112,7 +196,6 @@ export function TextPortal({ className }: TextPortalProps) {
           </p>
         </div>
       ) : (
-        // <div className='flex-1 min-h-0 overflow-y-auto rounded-md border border-foreground/10'>
         <ScrollArea className='border-foreground/10 min-h-0 flex-1 overflow-y-auto rounded-md border'>
           <div className='space-y-3 p-3'>
             {messages.map((msg) => (
@@ -133,21 +216,48 @@ export function TextPortal({ className }: TextPortalProps) {
                     {new Date(msg.sentAt).toLocaleTimeString()}
                   </span>
                 </div>
-                {/* Message text + copy button */}
+                {/* Message content */}
                 <div className='flex items-start gap-2 pl-3.5'>
-                  <p className='flex-1 text-sm wrap-break-word'>{msg.text}</p>
-                  <CopyButton
-                    textToCopy={msg.text}
-                    size='icon'
-                    variant='tertiary'
-                    iconSize={12}
-                  />
+                  {msg.mediaIds ? (
+                    <button
+                      onClick={() => navigate('/media')}
+                      className='flex-1 text-left text-sm text-primary underline-offset-2 hover:underline'
+                    >
+                      📎 {msg.text}
+                    </button>
+                  ) : (
+                    <>
+                      <p className='flex-1 text-sm break-words'>{msg.text}</p>
+                      <CopyButton
+                        textToCopy={msg.text}
+                        size='icon'
+                        variant='tertiary'
+                        iconSize={12}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
+      )}
+
+      {/* Upload progress bar */}
+      {uploading && (
+        <div className='shrink-0 px-1 pt-2'>
+          <div className='flex items-center justify-between text-xs'>
+            <span className='text-foreground/60'>Uploading…</span>
+            <span className='font-mono text-foreground/80'>{progress}%</span>
+          </div>
+          <div className='mt-1 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10'>
+            <div
+              className='h-full rounded-full bg-primary transition-all duration-300'
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Compose area — always at the bottom */}
@@ -168,15 +278,31 @@ export function TextPortal({ className }: TextPortalProps) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder='Type text to send…'
-          rows={3}
+          placeholder='Type a message…'
+          rows={2}
           className='max-h-32'
         />
 
         <div className='flex items-center justify-between'>
-          <span className='text-foreground/40 hidden text-xs md:inline'>
-            Ctrl+Enter to send
-          </span>
+          {/* Attach file button */}
+          <Button
+            size='sm'
+            variant='tertiary'
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <Plus className='mr-1 h-4 w-4' />
+            Media
+          </Button>
+          <input
+            ref={fileInputRef}
+            type='file'
+            accept={ACCEPTED_TYPES}
+            multiple
+            onChange={handleFileSelect}
+            className='hidden'
+          />
+
           <Button
             onClick={handleSend}
             disabled={!draft.trim() || sending || !deviceId}

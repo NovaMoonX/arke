@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { ChevronLeft } from '@moondreamsdev/dreamer-ui/symbols';
 import { useSessionContext } from '@hooks/useSessionContext';
-import { MediaPicker } from '@components/MediaPicker';
 import { MediaGallery } from '@components/MediaGallery';
 
 function Media() {
@@ -38,7 +37,6 @@ function Media() {
           <h1 className='text-xl font-bold'>Shared Media</h1>
         </div>
 
-        <MediaPicker />
         <MediaGallery />
       </div>
     </div>
