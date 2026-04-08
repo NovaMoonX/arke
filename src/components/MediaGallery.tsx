@@ -104,7 +104,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                 ) : isPDF ? (
                   <div className='aspect-square w-full overflow-hidden'>
                     <iframe
-                      src={`${item.downloadURL}#toolbar=0&navpanes=0&scrollbar=0`}
+                      src={item.downloadURL + '#toolbar=0&navpanes=0&scrollbar=0'}
                       title={item.fileName}
                       className='pointer-events-none h-full w-full scale-100'
                     />
