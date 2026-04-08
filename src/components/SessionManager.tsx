@@ -9,6 +9,7 @@ import {
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { QRDisplay } from '@components/QRDisplay';
+import { QRCodeIcon } from '@components/icons/QRCodeIcon';
 
 interface SessionManagerProps {
   className?: string;
@@ -80,7 +81,7 @@ export function SessionManager({ className }: SessionManagerProps) {
               onClick={() => setShowQR(true)}
               className='text-xs'
             >
-              QR
+              <QRCodeIcon className='h-4 w-4' />
             </Button>
           )}
           <Button

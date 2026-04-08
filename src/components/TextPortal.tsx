@@ -14,7 +14,7 @@ import {
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
-import { Plus } from '@moondreamsdev/dreamer-ui/symbols';
+import { MediaIcon } from '@components/icons/MediaIcon';
 import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
 import { useSessionContext } from '@hooks/useSessionContext';
@@ -232,7 +232,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           rel='noopener noreferrer'
                           className='text-primary underline-offset-2 hover:underline'
                         >
-                          📎 {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
+                          <MediaIcon className='h-4 w-4 align-text-bottom' /> {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
                         </a>
                       ) : (
                         <>
@@ -240,7 +240,7 @@ export function TextPortal({ className }: TextPortalProps) {
                             onClick={() => navigate('/media')}
                             className='text-left'
                           >
-                            📎{' '}
+                            <MediaIcon className='h-4 w-4 align-text-bottom' />{' '}
                             <span className='text-primary underline-offset-2 hover:underline'>
                               {msg.text} — View all media
                             </span>
@@ -332,7 +332,7 @@ export function TextPortal({ className }: TextPortalProps) {
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            <Plus className='mr-1 h-4 w-4' />
+            <MediaIcon className='mr-1 h-4 w-4' />
             Media
           </Button>
           <input
