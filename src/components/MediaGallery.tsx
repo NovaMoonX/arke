@@ -106,7 +106,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                     <iframe
                       src={item.downloadURL + '#toolbar=0&navpanes=0&scrollbar=0'}
                       title={item.fileName}
-                      className='pointer-events-none h-full w-full scale-100'
+                      className='pointer-events-none h-full w-full scale-105'
                     />
                   </div>
                 ) : (
