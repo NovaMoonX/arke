@@ -26,6 +26,7 @@ interface UseSessionReturn {
   joinSession: (pin: string) => Promise<void>;
   leaveSession: () => Promise<void>;
   loading: boolean;
+  authenticating: boolean;
   error: string | null;
   deviceId: string | null;
   deviceName: string;
@@ -41,6 +42,7 @@ export function useSession(): UseSessionReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [authenticating, setAuthenticating] = useState(true);
 
   const identity = useMemo(
     () => userId ? getDeviceIdentity(userId) : EMPTY_IDENTITY,
@@ -53,16 +55,23 @@ export function useSession(): UseSessionReturn {
 
   // Authenticate anonymously
   useEffect(() => {
-    if (!auth) return;
+    if (!auth) {
+      setAuthenticating(false);
+      return;
+    }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
       }
+      setAuthenticating(false);
     });
 
-    signInAnonymously(auth).catch((err) => {
-      setError(`Authentication failed: ${err.message}`);
+    signInAnonymously(auth).catch(() => {
+      // Auth state change listener will handle the final state.
+      // Don't surface auth errors here — they are expected while
+      // authentication is still bootstrapping (e.g. on a /join/:pin route).
+      setAuthenticating(false);
     });
 
     return () => unsubscribe();
@@ -159,6 +168,10 @@ export function useSession(): UseSessionReturn {
       setError('Unable to reach database');
       return;
     }
+    if (authenticating) {
+      // Auth still in progress — silently wait; the caller can retry.
+      return;
+    }
     if (!userId) {
       setError('Not authenticated. Please try refreshing the page.');
       return;
@@ -203,12 +216,16 @@ export function useSession(): UseSessionReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, identity, subscribeToSession]);
+  }, [userId, identity, subscribeToSession, authenticating]);
 
   const joinSession = useCallback(
     async (pin: string) => {
       if (!database) {
         setError('Unable to reach database');
+        return;
+      }
+      if (authenticating) {
+        // Auth still in progress — silently wait; the caller can retry.
         return;
       }
       if (!userId) {
@@ -260,7 +277,7 @@ export function useSession(): UseSessionReturn {
         setLoading(false);
       }
     },
-    [userId, identity, subscribeToSession],
+    [userId, identity, subscribeToSession, authenticating],
   );
 
   const leaveSession = useCallback(async () => {
@@ -353,6 +370,7 @@ export function useSession(): UseSessionReturn {
     joinSession,
     leaveSession,
     loading,
+    authenticating,
     error,
     deviceId: userId,
     deviceName: identity.name,

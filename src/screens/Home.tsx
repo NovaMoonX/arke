@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { APP_TITLE, APP_DESCRIPTION } from '@lib/app';
 import { SessionManager } from '@components/SessionManager';
 import { TextPortal } from '@components/TextPortal';
 import { MediaSummary } from '@components/MediaSummary';
+import { OnboardingFlow } from '@components/OnboardingFlow';
+import { SessionSettings } from '@components/SessionSettings';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Home() {
 	const { session } = useSessionContext();
+	const [showSettings, setShowSettings] = useState(false);
 
 	if (session) {
 		return (
@@ -15,13 +19,18 @@ function Home() {
 						<h1 className='text-3xl font-bold md:text-4xl'>{APP_TITLE}</h1>
 					</div>
 					<div className='shrink-0 pb-2'>
-						<SessionManager />
+						<SessionManager onOpenSettings={() => setShowSettings(true)} />
 					</div>
 					<div className='shrink-0 pb-2'>
 						<MediaSummary />
 					</div>
 					<TextPortal className='flex-1' />
 				</div>
+
+				<SessionSettings
+					isOpen={showSettings}
+					onClose={() => setShowSettings(false)}
+				/>
 			</div>
 		);
 	}
@@ -39,6 +48,7 @@ function Home() {
 				</div>
 				<SessionManager />
 			</div>
+			<OnboardingFlow />
 		</div>
 	);
 }

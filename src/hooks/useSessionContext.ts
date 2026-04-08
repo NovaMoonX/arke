@@ -10,6 +10,7 @@ export interface SessionContextValue {
   joinSession: (pin: string) => Promise<void>;
   leaveSession: () => Promise<void>;
   loading: boolean;
+  authenticating: boolean;
   error: string | null;
   deviceId: string | null;
   deviceName: string;

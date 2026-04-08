@@ -10,12 +10,13 @@ function Media() {
 
   if (!session) {
     return (
-      <div className='page flex flex-col items-center justify-center'>
+      <div className='page flex flex-col items-center justify-center' role='alert'>
         <p className='text-foreground/60'>No active session.</p>
         <Button
           variant='secondary'
           className='mt-4'
           onClick={() => navigate('/')}
+          aria-label='Go to home page'
         >
           Go Home
         </Button>
@@ -31,6 +32,7 @@ function Media() {
             size='sm'
             variant='secondary'
             onClick={() => navigate('/')}
+            aria-label='Back to home'
           >
             <ChevronLeft className='h-4 w-4' />
           </Button>

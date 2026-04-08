@@ -195,7 +195,7 @@ export function TextPortal({ className }: TextPortalProps) {
   if (!session) return null;
 
   return (
-    <div className={join('flex min-h-0 flex-1 flex-col', className)}>
+    <div className={join('flex min-h-0 flex-1 flex-col', className)} role='region' aria-label='Message portal'>
       {/* Message feed */}
       {messages.length === 0 ? (
         <div className='flex flex-1 items-center justify-center'>
@@ -204,8 +204,8 @@ export function TextPortal({ className }: TextPortalProps) {
           </p>
         </div>
       ) : (
-        <ScrollArea className='border-foreground/10 min-h-0 flex-1 overflow-y-auto rounded-md border'>
-          <div className='space-y-3 p-3'>
+        <ScrollArea className='border-foreground/10 min-h-0 flex-1 overflow-y-auto rounded-md border' aria-label='Message feed'>
+          <div className='space-y-3 p-3' role='log' aria-live='polite'>
             {messages.map((msg) => (
               <div key={msg.id} className='flex flex-col gap-1'>
                 {/* Sender badge + timestamp */}
@@ -213,6 +213,7 @@ export function TextPortal({ className }: TextPortalProps) {
                   <span
                     className='inline-block h-2 w-2 shrink-0 rounded-full'
                     style={{ backgroundColor: msg.color }}
+                    aria-hidden='true'
                   />
                   <span
                     className='text-xs font-semibold'
@@ -234,6 +235,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           target='_blank'
                           rel='noopener noreferrer'
                           className='text-primary underline-offset-2 hover:underline'
+                          aria-label={`Open shared file: ${msg.fileNames?.[0] ?? 'media'}`}
                         >
                           <MediaIcon className='h-4 w-4 align-text-bottom' /> {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
                         </a>
@@ -242,6 +244,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           <button
                             onClick={() => navigate('/media')}
                             className='text-left'
+                            aria-label='View all shared media'
                           >
                             <MediaIcon className='h-4 w-4 align-text-bottom' />{' '}
                             <span className='text-primary underline-offset-2 hover:underline'>
@@ -290,7 +293,7 @@ export function TextPortal({ className }: TextPortalProps) {
 
       {/* Upload progress bar */}
       {uploading && (
-        <div className='shrink-0 px-1 pt-2'>
+        <div className='shrink-0 px-1 pt-2' role='status' aria-label='File upload progress'>
           <div className='flex items-center justify-between text-xs'>
             <span className='text-foreground/60'>
               Uploading{uploadIndex.total > 1 ? ` ${uploadIndex.current}/${uploadIndex.total}` : ''}…
@@ -301,6 +304,10 @@ export function TextPortal({ className }: TextPortalProps) {
             <div
               className='bg-primary h-full rounded-full transition-all duration-300'
               style={{ width: `${progress}%` }}
+              role='progressbar'
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
             />
           </div>
         </div>
@@ -313,6 +320,7 @@ export function TextPortal({ className }: TextPortalProps) {
           <span
             className='inline-block h-2 w-2 rounded-full'
             style={{ backgroundColor: deviceColor }}
+            aria-hidden='true'
           />
           <span className='text-xs font-medium' style={{ color: deviceColor }}>
             {deviceName}
@@ -327,6 +335,7 @@ export function TextPortal({ className }: TextPortalProps) {
           placeholder='Type a message…'
           rows={2}
           className='max-h-32'
+          aria-label='Message input'
         />
 
         <div className='flex items-center justify-between'>
@@ -336,6 +345,7 @@ export function TextPortal({ className }: TextPortalProps) {
             variant='tertiary'
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
+            aria-label='Attach media files'
           >
             <MediaIcon className='mr-1 h-4 w-4' />
             Media
@@ -347,12 +357,14 @@ export function TextPortal({ className }: TextPortalProps) {
             multiple
             onChange={handleFileSelect}
             className='hidden'
+            aria-hidden='true'
           />
 
           <Button
             onClick={handleSend}
             disabled={!draft.trim() || sending || !deviceId}
             size='sm'
+            aria-label='Send message'
           >
             {sending ? 'Sending…' : 'Send'}
           </Button>

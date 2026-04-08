@@ -5,7 +5,9 @@ function Layout() {
 	return (
 		<div className='page transition-colors duration-200'>
 			<ThemeToggle />
-			<Outlet />
+			<main>
+				<Outlet />
+			</main>
 		</div>
 	);
 }

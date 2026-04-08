@@ -52,6 +52,7 @@ export function MediaSummary({ className }: MediaSummaryProps) {
         variant='tertiary'
         onClick={() => navigate('/media')}
         className='w-full text-xs'
+        aria-label={`View all ${count} shared media items`}
       >
         <ExternalLink className='mr-1 h-3 w-3' />
         View all media ({count})
