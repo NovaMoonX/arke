@@ -117,12 +117,15 @@ export function TextPortal({ className }: TextPortalProps) {
       if (!files || files.length === 0 || !database || !sessionPin || !deviceId)
         return;
 
+      // Clone file list before resetting – e.target.files is a live reference
+      const selectedFiles = Array.from(files);
+
       // Reset input so the same file can be selected again
       e.target.value = '';
 
       // Quick client-side size check
       const validFiles: File[] = [];
-      for (const file of Array.from(files)) {
+      for (const file of selectedFiles) {
         if (file.size > MAX_FILE_SIZE) {
           addToast({
             title: `${file.name} is too large (max 10MB)`,
@@ -140,7 +143,6 @@ export function TextPortal({ className }: TextPortalProps) {
         const id = await uploadMedia(file);
         if (id) mediaIds.push(id);
       }
-
       if (mediaIds.length === 0) return;
 
       // Build summary text
@@ -174,14 +176,7 @@ export function TextPortal({ className }: TextPortalProps) {
         addToast({ title: 'Failed to post media message', type: 'error' });
       }
     },
-    [
-      sessionPin,
-      deviceId,
-      deviceName,
-      deviceColor,
-      addToast,
-      uploadMedia,
-    ],
+    [sessionPin, deviceId, deviceName, deviceColor, addToast, uploadMedia],
   );
 
   if (!session) return null;
@@ -221,13 +216,18 @@ export function TextPortal({ className }: TextPortalProps) {
                   {msg.mediaIds ? (
                     <button
                       onClick={() => navigate('/media')}
-                      className='flex-1 text-left text-sm text-primary underline-offset-2 hover:underline'
+                      className='flex-1 text-left text-sm'
                     >
-                      📎 {msg.text}
+                      📎{' '}
+                      <span className='text-primary underline-offset-2 hover:underline'>
+                        {msg.text}
+                      </span>
                     </button>
                   ) : (
                     <>
-                      <p className='flex-1 text-sm break-words'>{msg.text}</p>
+                      <p className='flex-1 text-sm wrap-break-word'>
+                        {msg.text}
+                      </p>
                       <CopyButton
                         textToCopy={msg.text}
                         size='icon'
@@ -249,11 +249,11 @@ export function TextPortal({ className }: TextPortalProps) {
         <div className='shrink-0 px-1 pt-2'>
           <div className='flex items-center justify-between text-xs'>
             <span className='text-foreground/60'>Uploading…</span>
-            <span className='font-mono text-foreground/80'>{progress}%</span>
+            <span className='text-foreground/80 font-mono'>{progress}%</span>
           </div>
-          <div className='mt-1 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10'>
+          <div className='bg-foreground/10 mt-1 h-1.5 w-full overflow-hidden rounded-full'>
             <div
-              className='h-full rounded-full bg-primary transition-all duration-300'
+              className='bg-primary h-full rounded-full transition-all duration-300'
               style={{ width: `${progress}%` }}
             />
           </div>
