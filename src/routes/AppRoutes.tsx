@@ -22,6 +22,15 @@ export const router = createBrowserRouter([
           return { Component: About };
         },
       },
+      // Media gallery (lazy loaded)
+      {
+        path: 'media',
+        HydrateFallback: Loading,
+        lazy: async () => {
+          const { default: Media } = await import('@screens/Media');
+          return { Component: Media };
+        },
+      },
       // Join session by PIN (lazy loaded)
       {
         path: 'join/:pin',

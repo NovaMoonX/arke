@@ -1,6 +1,7 @@
 import { APP_TITLE, APP_DESCRIPTION } from '@lib/app';
 import { SessionManager } from '@components/SessionManager';
 import { TextPortal } from '@components/TextPortal';
+import { MediaSummary } from '@components/MediaSummary';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Home() {
@@ -10,16 +11,14 @@ function Home() {
 		return (
 			<div className='flex h-dvh w-dvw flex-col overflow-hidden'>
 				<div className='mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden px-4'>
-					<div className='shrink-0 space-y-2 pb-6 pt-12 text-center'>
-						<h1 className='text-5xl font-bold md:text-6xl'>{APP_TITLE}</h1>
-						{APP_DESCRIPTION && (
-							<p className='text-lg text-foreground/80 md:text-xl'>
-								{APP_DESCRIPTION}
-							</p>
-						)}
+					<div className='shrink-0 space-y-2 pb-4 pt-8 text-center'>
+						<h1 className='text-3xl font-bold md:text-4xl'>{APP_TITLE}</h1>
 					</div>
-					<div className='shrink-0 pb-4'>
+					<div className='shrink-0 pb-2'>
 						<SessionManager />
+					</div>
+					<div className='shrink-0 pb-2'>
+						<MediaSummary />
 					</div>
 					<TextPortal className='flex-1' />
 				</div>

@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /sessions/{sessionPin}/media/{fileName} {
+      // Only authenticated users can read/write
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        // Enforce 10MB file size limit
+        && request.resource.size <= 10 * 1024 * 1024
+        // Restrict to images and PDFs
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf');
+      allow delete: if request.auth != null;
+    }
+  }
+}

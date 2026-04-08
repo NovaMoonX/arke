@@ -1,8 +1,15 @@
 import { useState } from 'react';
-import { Button, Input, Modal, Callout } from '@moondreamsdev/dreamer-ui/components';
+import {
+  Button,
+  Input,
+  Modal,
+  Callout,
+  CopyButton,
+} from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { QRDisplay } from '@components/QRDisplay';
+import { QRCodeIcon } from '@components/icons/QRCodeIcon';
 
 interface SessionManagerProps {
   className?: string;
@@ -39,59 +46,66 @@ export function SessionManager({ className }: SessionManagerProps) {
     await leaveSession();
   };
 
-  // Active session view
+  // Active session — compact inline bar
   if (session) {
     return (
-      <div className={join('space-y-6', className)}>
-        {/* Session Status */}
-        <Callout
-          variant='success'
-          icon={null}
-          description={
-            <div className='text-center'>
-              <p className='text-sm font-medium'>● Connected</p>
-              <p className='mt-1 font-mono text-lg font-bold tracking-widest'>
-                PIN: {session.pin}
-              </p>
-              <p className='mt-1 text-sm opacity-60'>
-                {participants.length}{' '}
-                {participants.length === 1 ? 'device' : 'devices'} connected
-              </p>
-            </div>
-          }
-        />
+      <div className={join('space-y-2', className)}>
+        <div className='flex items-center gap-2 rounded-lg border border-foreground/10 px-3 py-2'>
+          {/* Status dot + PIN */}
+          <span className='h-2 w-2 shrink-0 rounded-full bg-green-500' />
+          <span className='font-mono text-sm font-bold tracking-widest'>
+            {session.pin}
+          </span>
 
-        {/* QR Modal for host */}
-        {isHost && (
-          <>
+          <CopyButton
+            textToCopy={session.pin}
+            size='icon'
+            variant='tertiary'
+            iconSize={12}
+          />
+
+          {/* Device count */}
+          <span className='text-xs text-foreground/50'>
+            · {participants.length}{' '}
+            {participants.length === 1 ? 'device' : 'devices'}
+          </span>
+
+          {/* Spacer */}
+          <span className='flex-1' />
+
+          {/* QR + Leave */}
+          {isHost && (
             <Button
+              size='sm'
+              variant='tertiary'
               onClick={() => setShowQR(true)}
-              variant='secondary'
-              className='w-full'
+              className='text-xs'
             >
-              Show QR Code
+              <QRCodeIcon className='h-4 w-4' />
             </Button>
+          )}
+          <Button
+            size='sm'
+            variant='destructive'
+            onClick={handleLeaveSession}
+            className='text-xs'
+          >
+            Leave
+          </Button>
+        </div>
 
-            <Modal
-              isOpen={showQR}
-              onClose={() => setShowQR(false)}
-              title='Share Session'
-            >
-              <div className='p-4'>
-                <QRDisplay pin={session.pin} />
-              </div>
-            </Modal>
-          </>
+        {/* QR modal */}
+        {isHost && (
+          <Modal
+            isOpen={showQR}
+            onClose={() => setShowQR(false)}
+            title='Share Session'
+          >
+            <div className='p-4'>
+              <QRDisplay pin={session.pin} />
+            </div>
+          </Modal>
         )}
-
-        {/* Leave Button */}
-        <Button
-          onClick={handleLeaveSession}
-          variant='destructive'
-          className='w-full'
-        >
-          Leave Session
-        </Button>
       </div>
     );
   }
