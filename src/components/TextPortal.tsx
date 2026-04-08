@@ -48,6 +48,7 @@ export function TextPortal({ className }: TextPortalProps) {
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [sending, setSending] = useState(false);
+  const [uploadIndex, setUploadIndex] = useState({ current: 0, total: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,8 +142,10 @@ export function TextPortal({ className }: TextPortalProps) {
 
       // Upload each file and collect results
       const results: MediaUploadResult[] = [];
-      for (const file of validFiles) {
-        const result = await uploadMedia(file);
+      setUploadIndex({ current: 0, total: validFiles.length });
+      for (let i = 0; i < validFiles.length; i++) {
+        setUploadIndex({ current: i + 1, total: validFiles.length });
+        const result = await uploadMedia(validFiles[i]);
         if (result) results.push(result);
       }
       if (results.length === 0) return;
@@ -289,7 +292,9 @@ export function TextPortal({ className }: TextPortalProps) {
       {uploading && (
         <div className='shrink-0 px-1 pt-2'>
           <div className='flex items-center justify-between text-xs'>
-            <span className='text-foreground/60'>Uploading…</span>
+            <span className='text-foreground/60'>
+              Uploading{uploadIndex.total > 1 ? ` ${uploadIndex.current}/${uploadIndex.total}` : ''}…
+            </span>
             <span className='text-foreground/80 font-mono'>{progress}%</span>
           </div>
           <div className='bg-foreground/10 mt-1 h-1.5 w-full overflow-hidden rounded-full'>
