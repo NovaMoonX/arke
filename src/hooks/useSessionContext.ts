@@ -11,6 +11,9 @@ export interface SessionContextValue {
   leaveSession: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  deviceId: string | null;
+  deviceName: string;
+  deviceColor: string;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);

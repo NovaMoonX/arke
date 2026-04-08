@@ -1,194 +1,175 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Textarea } from '@moondreamsdev/dreamer-ui/components';
-import { CopyButton } from '@moondreamsdev/dreamer-ui/components';
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from 'react';
+import { Textarea, Button, CopyButton } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
-import { ref, set, get, onValue, type Unsubscribe } from 'firebase/database';
+import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
+import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
-import { useDebounce } from '@hooks/useDebounce';
-import { useClipboard } from '@hooks/useClipboard';
+import { useSessionContext } from '@hooks/useSessionContext';
 
-const HISTORY_LIMIT = 10;
-const DEBOUNCE_DELAY = 150;
-
-interface HistoryItem {
+interface TextMessage {
+  id: string;
   text: string;
-  savedAt: number;
+  deviceId: string;
+  deviceName: string;
+  color: string;
+  sentAt: number;
 }
 
 interface TextPortalProps {
-  sessionPin: string;
   className?: string;
 }
 
-type SyncStatus = 'synced' | 'syncing';
+export function TextPortal({ className }: TextPortalProps) {
+  const { session, deviceId, deviceName, deviceColor } = useSessionContext();
+  const { addToast } = useToast();
+  const [draft, setDraft] = useState('');
+  const [messages, setMessages] = useState<TextMessage[]>([]);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-export function TextPortal({ sessionPin, className }: TextPortalProps) {
-  const [localText, setLocalText] = useState('');
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
-  const isRemoteUpdateRef = useRef(false);
-  const prevTextRef = useRef('');
+  const sessionPin = session?.pin;
 
-  const debouncedText = useDebounce(localText, DEBOUNCE_DELAY);
-  const { readFromClipboard } = useClipboard();
-
-  // Listen for remote updates
+  // Subscribe to messages from RTDB
   useEffect(() => {
-    if (!database) return;
+    if (!database || !sessionPin) return;
 
-    const textRef = ref(database, `sessions/${sessionPin}/text`);
+    const messagesRef = ref(database, `sessions/${sessionPin}/messages`);
 
-    const unsubscribe: Unsubscribe = onValue(textRef, (snapshot) => {
-      const remoteText: string = snapshot.exists() ? (snapshot.val() as string) : '';
-      // Only update local state if the change came from a remote device
-      setLocalText((current) => {
-        if (current !== remoteText) {
-          isRemoteUpdateRef.current = true;
-          return remoteText;
-        }
-        return current;
-      });
-      // Mark as synced whenever Firebase acknowledges any value
-      setSyncStatus('synced');
+    const unsubscribe: Unsubscribe = onValue(messagesRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        setMessages([]);
+        return;
+      }
+
+      const raw = snapshot.val() as Record<string, Omit<TextMessage, 'id'>>;
+      const sorted = Object.entries(raw)
+        .map(([key, value]) => ({ id: key, ...value }))
+        .sort((a, b) => a.sentAt - b.sentAt);
+
+      setMessages(sorted);
     });
 
     return () => unsubscribe();
   }, [sessionPin]);
 
-  // Write debounced text to Firebase (skip if triggered by remote update)
+  // Auto-scroll to the latest message
   useEffect(() => {
-    if (isRemoteUpdateRef.current) {
-      isRemoteUpdateRef.current = false;
-      prevTextRef.current = debouncedText;
-      // Status was already set by onValue callback — no setState needed here
-      return;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    if (debouncedText === prevTextRef.current) return;
+  const handleSend = useCallback(async () => {
+    const text = draft.trim();
+    if (!text || !database || !sessionPin || !deviceId) return;
 
-    if (!database) return;
-
-    const textRef = ref(database, `sessions/${sessionPin}/text`);
-
-    set(textRef, debouncedText)
-      .then(() => {
-        setSyncStatus('synced');
-        // Save to history when text changes meaningfully (non-empty)
-        if (debouncedText.trim()) {
-          saveToHistory(sessionPin, debouncedText);
-        }
-      })
-      .catch(() => {
-        setSyncStatus('synced');
+    setSending(true);
+    try {
+      const messagesRef = ref(database, `sessions/${sessionPin}/messages`);
+      await push(messagesRef, {
+        text,
+        deviceId,
+        deviceName,
+        color: deviceColor,
+        sentAt: Date.now(),
       });
+      setDraft('');
+    } catch {
+      addToast({ title: 'Failed to send message', type: 'error' });
+    } finally {
+      setSending(false);
+    }
+  }, [draft, sessionPin, deviceId, deviceName, deviceColor, addToast]);
 
-    prevTextRef.current = debouncedText;
-  }, [debouncedText, sessionPin]);
-
-  // Show syncing status immediately on local change
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setSyncStatus('syncing');
-      setLocalText(e.target.value);
-    },
-    [],
-  );
-
-  // Keyboard shortcut: Ctrl/Cmd+V → paste from system clipboard into portal
   const handleKeyDown = useCallback(
-    async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        const clipboardText = await readFromClipboard();
-        if (clipboardText) {
-          setLocalText(clipboardText);
-          setSyncStatus('syncing');
-        }
+        handleSend();
       }
     },
-    [readFromClipboard],
+    [handleSend],
   );
 
-  const syncLabel = syncStatus === 'syncing' ? 'Syncing…' : 'Synced';
+  if (!session) return null;
 
   return (
-    <div className={join('space-y-2', className)}>
-      {/* Sync status indicator */}
-      <div className='flex items-center justify-between'>
-        <span className='text-sm font-medium text-foreground/70'>
-          Text Portal
-        </span>
-        <span
-          className={join(
-            'flex items-center gap-1 text-xs',
-            syncStatus === 'syncing'
-              ? 'text-yellow-500'
-              : 'text-green-500',
-          )}
-        >
+    <div className={join('flex flex-col gap-3', className)}>
+      {/* Message feed */}
+      {messages.length === 0 ? (
+        <p className='py-4 text-center text-sm text-foreground/40'>
+          No messages yet — send the first one!
+        </p>
+      ) : (
+        <div className='max-h-64 space-y-3 overflow-y-auto rounded-md border border-foreground/10 p-3'>
+          {messages.map((msg) => (
+            <div key={msg.id} className='flex flex-col gap-1'>
+              {/* Sender badge + timestamp */}
+              <div className='flex items-center gap-1.5'>
+                <span
+                  className='inline-block h-2 w-2 shrink-0 rounded-full'
+                  style={{ backgroundColor: msg.color }}
+                />
+                <span
+                  className='text-xs font-semibold'
+                  style={{ color: msg.color }}
+                >
+                  {msg.deviceName}
+                </span>
+                <span className='text-xs text-foreground/30'>
+                  {new Date(msg.sentAt).toLocaleTimeString()}
+                </span>
+              </div>
+              {/* Message text + copy button */}
+              <div className='flex items-start gap-2 pl-3.5'>
+                <p className='flex-1 break-words text-sm'>{msg.text}</p>
+                <CopyButton
+                  textToCopy={msg.text}
+                  size='icon'
+                  variant='tertiary'
+                  iconSize={12}
+                />
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Compose area */}
+      <div className='space-y-2'>
+        {/* Device identity indicator */}
+        <div className='flex items-center gap-1.5'>
           <span
-            className={join(
-              'inline-block h-2 w-2 rounded-full',
-              syncStatus === 'syncing' ? 'bg-yellow-500' : 'bg-green-500',
-            )}
+            className='inline-block h-2 w-2 rounded-full'
+            style={{ backgroundColor: deviceColor }}
           />
-          {syncLabel}
-        </span>
-      </div>
+          <span
+            className='text-xs font-medium'
+            style={{ color: deviceColor }}
+          >
+            {deviceName}
+          </span>
+        </div>
 
-      <Textarea
-        autoExpand
-        value={localText}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder='Type or paste text here — it syncs instantly to all devices…'
-        rows={5}
-      />
+        <Textarea
+          autoExpand
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder='Type text to send… (Ctrl+Enter to send)'
+          rows={3}
+        />
 
-      {/* Copy button */}
-      <div className='flex justify-end'>
-        <CopyButton
-          textToCopy={localText}
-          showCopyText
-          variant='secondary'
-          size='sm'
-          disabled={!localText}
-        >
-          Copy
-        </CopyButton>
+        <div className='flex justify-end'>
+          <Button
+            onClick={handleSend}
+            disabled={!draft.trim() || sending || !deviceId}
+            size='sm'
+          >
+            {sending ? 'Sending…' : 'Send'}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-/** Persist a history entry in RTDB, keeping only the last HISTORY_LIMIT items. */
-async function saveToHistory(pin: string, text: string): Promise<void> {
-  if (!database) return;
-
-  try {
-    const historyRef = ref(database, `sessions/${pin}/history`);
-
-    // Read current history
-    const snapshot = await get(historyRef);
-
-    let items: HistoryItem[] = [];
-    if (snapshot.exists()) {
-      const raw = snapshot.val() as Record<string, HistoryItem>;
-      items = Object.values(raw);
-    }
-
-    // Add new entry and trim to limit — new entry always has the latest timestamp
-    const newItem: HistoryItem = { text, savedAt: Date.now() };
-    items.push(newItem);
-    const trimmed = items.slice(-HISTORY_LIMIT);
-
-    // Rebuild as an indexed object
-    const updated: Record<string, HistoryItem> = {};
-    trimmed.forEach((item, index) => {
-      updated[index.toString()] = item;
-    });
-
-    await set(historyRef, updated);
-  } catch {
-    // Silently fail — history is non-critical
-  }
-}

@@ -1,23 +1,10 @@
-import { useCallback } from 'react';
-import { set, ref } from 'firebase/database';
 import { APP_TITLE, APP_DESCRIPTION } from '@lib/app';
-import { database } from '@lib/firebase';
 import { SessionManager } from '@components/SessionManager';
 import { TextPortal } from '@components/TextPortal';
-import { TextHistory } from '@components/TextHistory';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Home() {
 	const { session } = useSessionContext();
-
-	const handleRestore = useCallback(
-		async (text: string) => {
-			if (!session || !database) return;
-			const textRef = ref(database, `sessions/${session.pin}/text`);
-			await set(textRef, text);
-		},
-		[session],
-	);
 
 	return (
 		<div className='page flex flex-col items-center justify-center'>
@@ -32,12 +19,8 @@ function Home() {
 				</div>
 				<SessionManager />
 				{session && (
-					<div className='space-y-6 text-left'>
-						<TextPortal sessionPin={session.pin} />
-						<TextHistory
-							sessionPin={session.pin}
-							onRestore={handleRestore}
-						/>
+					<div className='text-left'>
+						<TextPortal />
 					</div>
 				)}
 			</div>
