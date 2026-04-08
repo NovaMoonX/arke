@@ -8,7 +8,7 @@ function Home() {
 
 	if (session) {
 		return (
-			<div className='page flex flex-col overflow-x-hidden'>
+			<div className='flex h-dvh w-dvw flex-col overflow-hidden'>
 				<div className='mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden px-4'>
 					<div className='shrink-0 space-y-2 pb-6 pt-12 text-center'>
 						<h1 className='text-5xl font-bold md:text-6xl'>{APP_TITLE}</h1>
