@@ -94,15 +94,13 @@ export function OnboardingFlow() {
         {/* Step dots */}
         <div
           className='flex items-center justify-center gap-2'
-          role='tablist'
-          aria-label='Onboarding steps'
+          aria-label={`Step ${step + 1} of ${STEPS.length}`}
+          role='status'
         >
           {STEPS.map((_, i) => (
             <span
               key={i}
-              role='tab'
-              aria-selected={i === step}
-              aria-label={`Step ${i + 1}`}
+              aria-hidden='true'
               className={join(
                 'h-2 w-2 rounded-full transition-colors',
                 i === step ? 'bg-primary' : 'bg-foreground/20',

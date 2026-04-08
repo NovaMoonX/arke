@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, Toggle } from '@moondreamsdev/dreamer-ui/components';
+import { Button, Modal } from '@moondreamsdev/dreamer-ui/components';
 import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
 import { Trash, Download } from '@moondreamsdev/dreamer-ui/symbols';
 import { ref, remove, get } from 'firebase/database';
@@ -15,7 +15,6 @@ interface SessionSettingsProps {
 export function SessionSettings({ isOpen, onClose }: SessionSettingsProps) {
   const { session, leaveSession, isHost } = useSessionContext();
   const { addToast } = useToast();
-  const [historyEnabled, setHistoryEnabled] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [ending, setEnding] = useState(false);
 
@@ -93,22 +92,6 @@ export function SessionSettings({ isOpen, onClose }: SessionSettingsProps) {
       ariaLabelledBy='session-settings-title'
     >
       <div className='space-y-5 p-4'>
-        {/* History toggle */}
-        <div className='flex items-center justify-between'>
-          <div>
-            <p className='text-sm font-medium'>Message History</p>
-            <p className='text-xs text-foreground/50'>
-              Keep messages visible after sending
-            </p>
-          </div>
-          <Toggle
-            checked={historyEnabled}
-            onCheckedChange={setHistoryEnabled}
-            size='sm'
-            aria-label='Toggle message history'
-          />
-        </div>
-
         {/* Clear content */}
         <div className='space-y-1'>
           <Button
