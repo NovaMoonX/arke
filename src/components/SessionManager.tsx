@@ -46,6 +46,7 @@ export function SessionManager({ className }: SessionManagerProps) {
         {/* Session Status */}
         <Callout
           variant='success'
+          icon={null}
           description={
             <div className='text-center'>
               <p className='text-sm font-medium'>● Connected</p>
@@ -100,7 +101,7 @@ export function SessionManager({ className }: SessionManagerProps) {
     <div className={join('space-y-6', className)}>
       {/* Error Display */}
       {error && (
-        <Callout variant='destructive' description={error} />
+        <Callout variant='destructive' icon={null} description={error} />
       )}
 
       {/* Start Sharing */}
