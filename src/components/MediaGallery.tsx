@@ -77,42 +77,43 @@ export function MediaGallery({ className }: MediaGalleryProps) {
 
   const currentUserId = auth?.currentUser?.uid;
 
-  if (items.length === 0) return null;
-
   return (
     <div className={join('space-y-3', className)}>
-      <h3 className='text-sm font-medium text-foreground/60'>
-        Shared Media ({items.length})
-      </h3>
+      {error && (
+        <Callout variant='destructive' icon={null} description={error} />
+      )}
 
-      {error && <Callout variant='destructive' description={error} />}
-
-      {/* Grid */}
-      <div className='grid grid-cols-3 gap-2'>
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className='group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-foreground/5'
-            onClick={() => setViewItem(item)}
-          >
-            {item.fileType.startsWith('image/') ? (
-              <img
-                src={item.downloadURL}
-                alt={item.fileName}
-                loading='lazy'
-                className='h-full w-full object-cover transition-transform group-hover:scale-105'
-              />
-            ) : (
-              <div className='flex h-full w-full flex-col items-center justify-center p-2'>
-                <span className='text-3xl'>📄</span>
-                <span className='mt-1 truncate text-xs text-foreground/60'>
-                  {item.fileName}
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <p className='py-8 text-center text-sm text-foreground/40'>
+          No media shared yet.
+        </p>
+      ) : (
+        <div className='grid grid-cols-3 gap-2'>
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className='group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-foreground/5'
+              onClick={() => setViewItem(item)}
+            >
+              {item.fileType.startsWith('image/') ? (
+                <img
+                  src={item.downloadURL}
+                  alt={item.fileName}
+                  loading='lazy'
+                  className='h-full w-full object-cover transition-transform group-hover:scale-105'
+                />
+              ) : (
+                <div className='flex h-full w-full flex-col items-center justify-center p-2'>
+                  <span className='text-3xl'>📄</span>
+                  <span className='mt-1 truncate text-xs text-foreground/60'>
+                    {item.fileName}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Full-size viewer modal */}
       <Modal

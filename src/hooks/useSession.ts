@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { customAlphabet } from 'nanoid';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
@@ -14,6 +14,7 @@ import { auth, database } from '@lib/firebase';
 import { SESSION_TTL } from '@lib/firebase/constants';
 import type { Session } from '@lib/types';
 import type { Participant } from '@lib/types';
+import { getDeviceIdentity } from '@utils/deviceIdentity';
 
 const generatePin = customAlphabet('0123456789', 6);
 
@@ -26,7 +27,12 @@ interface UseSessionReturn {
   leaveSession: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  deviceId: string | null;
+  deviceName: string;
+  deviceColor: string;
 }
+
+const EMPTY_IDENTITY = { name: '', color: '' };
 
 export function useSession(): UseSessionReturn {
   const [session, setSession] = useState<Session | null>(null);
@@ -35,6 +41,11 @@ export function useSession(): UseSessionReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const identity = useMemo(
+    () => userId ? getDeviceIdentity(userId) : EMPTY_IDENTITY,
+    [userId],
+  );
 
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
   const participantsUnsubRef = useRef<Unsubscribe | null>(null);
@@ -116,11 +127,15 @@ export function useSession(): UseSessionReturn {
                 const participant = value as {
                   deviceId: string;
                   joinedAt: number;
+                  name?: string;
+                  color?: string;
                 };
                 return {
                   id,
                   deviceId: participant.deviceId,
                   joinedAt: participant.joinedAt,
+                  name: participant.name,
+                  color: participant.color,
                 };
               },
             );
@@ -165,6 +180,8 @@ export function useSession(): UseSessionReturn {
           [userId]: {
             deviceId: userId,
             joinedAt: now,
+            name: identity.name,
+            color: identity.color,
           },
         },
       };
@@ -186,7 +203,7 @@ export function useSession(): UseSessionReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, subscribeToSession]);
+  }, [userId, identity, subscribeToSession]);
 
   const joinSession = useCallback(
     async (pin: string) => {
@@ -227,6 +244,8 @@ export function useSession(): UseSessionReturn {
         await set(participantRef, {
           deviceId: userId,
           joinedAt: now,
+          name: identity.name,
+          color: identity.color,
         });
 
         // Set up onDisconnect to remove this participant
@@ -241,7 +260,7 @@ export function useSession(): UseSessionReturn {
         setLoading(false);
       }
     },
-    [userId, subscribeToSession],
+    [userId, identity, subscribeToSession],
   );
 
   const leaveSession = useCallback(async () => {
@@ -335,6 +354,9 @@ export function useSession(): UseSessionReturn {
     leaveSession,
     loading,
     error,
+    deviceId: userId,
+    deviceName: identity.name,
+    deviceColor: identity.color,
   };
 
   return result;
