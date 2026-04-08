@@ -14,8 +14,13 @@ interface UploadState {
   error: string | null;
 }
 
+export interface MediaUploadResult {
+  id: string;
+  downloadURL: string;
+}
+
 interface UseMediaUploadReturn {
-  uploadMedia: (file: File) => Promise<string | null>;
+  uploadMedia: (file: File) => Promise<MediaUploadResult | null>;
   uploading: boolean;
   progress: number;
   error: string | null;
@@ -30,7 +35,7 @@ export function useMediaUpload(): UseMediaUploadReturn {
   });
 
   const uploadMedia = useCallback(
-    async (file: File): Promise<string | null> => {
+    async (file: File): Promise<MediaUploadResult | null> => {
       const userId = auth?.currentUser?.uid;
       if (!session || !userId) {
         setState((prev) => ({
@@ -55,7 +60,7 @@ export function useMediaUpload(): UseMediaUploadReturn {
         return null;
       }
 
-      return new Promise<string | null>((resolve) => {
+      return new Promise<MediaUploadResult | null>((resolve) => {
         task.on(
           'state_changed',
           (snapshot) => {
@@ -87,7 +92,7 @@ export function useMediaUpload(): UseMediaUploadReturn {
               });
 
               setState({ uploading: false, progress: 100, error: null });
-              resolve(mediaId);
+              resolve(mediaId ? { id: mediaId, downloadURL } : null);
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : 'Unknown error';

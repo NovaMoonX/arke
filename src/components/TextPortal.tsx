@@ -18,7 +18,7 @@ import { Plus } from '@moondreamsdev/dreamer-ui/symbols';
 import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
 import { useSessionContext } from '@hooks/useSessionContext';
-import { useMediaUpload } from '@hooks/useMediaUpload';
+import { useMediaUpload, type MediaUploadResult } from '@hooks/useMediaUpload';
 import { MAX_FILE_SIZE } from '@lib/firebase/storage';
 
 interface FeedMessage {
@@ -30,6 +30,8 @@ interface FeedMessage {
   sentAt: number;
   /** When present, this is a media message */
   mediaIds?: string[];
+  fileNames?: string[];
+  downloadURLs?: string[];
 }
 
 interface TextPortalProps {
@@ -137,13 +139,19 @@ export function TextPortal({ className }: TextPortalProps) {
       }
       if (validFiles.length === 0) return;
 
-      // Upload each file and collect IDs
-      const mediaIds: string[] = [];
+      // Upload each file and collect results
+      const results: MediaUploadResult[] = [];
       for (const file of validFiles) {
-        const id = await uploadMedia(file);
-        if (id) mediaIds.push(id);
+        const result = await uploadMedia(file);
+        if (result) results.push(result);
       }
-      if (mediaIds.length === 0) return;
+      if (results.length === 0) return;
+
+      const mediaIds = results.map((r) => r.id);
+      const fileNames = validFiles
+        .slice(0, results.length)
+        .map((f) => f.name);
+      const downloadURLs = results.map((r) => r.downloadURL);
 
       // Build summary text
       const imageCount = validFiles.filter((f) =>
@@ -171,6 +179,8 @@ export function TextPortal({ className }: TextPortalProps) {
           color: deviceColor,
           sentAt: Date.now(),
           mediaIds,
+          fileNames,
+          downloadURLs,
         });
       } catch {
         addToast({ title: 'Failed to post media message', type: 'error' });
@@ -214,15 +224,46 @@ export function TextPortal({ className }: TextPortalProps) {
                 {/* Message content */}
                 <div className='flex items-start gap-2 pl-3.5'>
                   {msg.mediaIds ? (
-                    <button
-                      onClick={() => navigate('/media')}
-                      className='flex-1 text-left text-sm'
-                    >
-                      📎{' '}
-                      <span className='text-primary underline-offset-2 hover:underline'>
-                        {msg.text}
-                      </span>
-                    </button>
+                    <div className='flex-1 text-sm'>
+                      {msg.mediaIds.length === 1 ? (
+                        <a
+                          href={msg.downloadURLs?.[0] ?? '#'}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='text-primary underline-offset-2 hover:underline'
+                        >
+                          📎 {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
+                        </a>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => navigate('/media')}
+                            className='text-left'
+                          >
+                            📎{' '}
+                            <span className='text-primary underline-offset-2 hover:underline'>
+                              {msg.text} — View all media
+                            </span>
+                          </button>
+                          {msg.fileNames && msg.fileNames.length > 0 && (
+                            <ul className='text-foreground/50 mt-1 list-inside list-disc text-xs'>
+                              {msg.fileNames.map((name, i) => (
+                                <li key={i}>
+                                  <a
+                                    href={msg.downloadURLs?.[i] ?? '#'}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-primary/70 underline-offset-2 hover:underline'
+                                  >
+                                    {name}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <p className='flex-1 text-sm wrap-break-word'>

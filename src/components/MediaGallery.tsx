@@ -129,7 +129,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                     variant='destructive'
                     disabled={deleting === item.id}
                     onClick={(e) => handleDelete(e, item)}
-                    className='absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100'
+                    className='absolute right-1 top-1 h-7 w-7 md:opacity-0 transition-opacity group-hover:opacity-100'
                   >
                     <Trash className='h-3 w-3' />
                   </Button>
