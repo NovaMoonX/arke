@@ -101,41 +101,43 @@ export function TextPortal({ className }: TextPortalProps) {
           </p>
         </div>
       ) : (
-        <ScrollArea className='flex-1 rounded-md border border-foreground/10'>
-          <div className='space-y-3 p-3'>
-            {messages.map((msg) => (
-              <div key={msg.id} className='flex flex-col gap-1'>
-                {/* Sender badge + timestamp */}
-                <div className='flex items-center gap-1.5'>
-                  <span
-                    className='inline-block h-2 w-2 shrink-0 rounded-full'
-                    style={{ backgroundColor: msg.color }}
-                  />
-                  <span
-                    className='text-xs font-semibold'
-                    style={{ color: msg.color }}
-                  >
-                    {msg.deviceName}
-                  </span>
-                  <span className='text-xs text-foreground/30'>
-                    {new Date(msg.sentAt).toLocaleTimeString()}
-                  </span>
+        <div className='flex-1 min-h-0'>
+          <ScrollArea className='h-full rounded-md border border-foreground/10'>
+            <div className='space-y-3 p-3'>
+              {messages.map((msg) => (
+                <div key={msg.id} className='flex flex-col gap-1'>
+                  {/* Sender badge + timestamp */}
+                  <div className='flex items-center gap-1.5'>
+                    <span
+                      className='inline-block h-2 w-2 shrink-0 rounded-full'
+                      style={{ backgroundColor: msg.color }}
+                    />
+                    <span
+                      className='text-xs font-semibold'
+                      style={{ color: msg.color }}
+                    >
+                      {msg.deviceName}
+                    </span>
+                    <span className='text-xs text-foreground/30'>
+                      {new Date(msg.sentAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  {/* Message text + copy button */}
+                  <div className='flex items-start gap-2 pl-3.5'>
+                    <p className='flex-1 break-words text-sm'>{msg.text}</p>
+                    <CopyButton
+                      textToCopy={msg.text}
+                      size='icon'
+                      variant='tertiary'
+                      iconSize={12}
+                    />
+                  </div>
                 </div>
-                {/* Message text + copy button */}
-                <div className='flex items-start gap-2 pl-3.5'>
-                  <p className='flex-1 break-words text-sm'>{msg.text}</p>
-                  <CopyButton
-                    textToCopy={msg.text}
-                    size='icon'
-                    variant='tertiary'
-                    iconSize={12}
-                  />
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
       )}
 
       {/* Compose area — always at the bottom */}
@@ -161,6 +163,7 @@ export function TextPortal({ className }: TextPortalProps) {
           onKeyDown={handleKeyDown}
           placeholder='Type text to send…'
           rows={3}
+          className='max-h-32'
         />
 
         <div className='flex items-center justify-between'>
