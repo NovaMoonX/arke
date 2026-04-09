@@ -274,31 +274,37 @@ export function TextPortal({ className }: TextPortalProps) {
       }
       if (validFiles.length === 0) return;
 
-      // Upload each file and collect results
-      const results: MediaUploadResult[] = [];
+      // Upload each file — track file+result pairs together
+      const pairs: { file: File; result: MediaUploadResult }[] = [];
       setUploadIndex({ current: 0, total: validFiles.length });
       for (let i = 0; i < validFiles.length; i++) {
         setUploadIndex({ current: i + 1, total: validFiles.length });
         const result = await uploadMedia(validFiles[i]);
-        if (result) results.push(result);
+        if (result) {
+          pairs.push({ file: validFiles[i], result });
+        } else {
+          // Surface the per-file failure to the user
+          addToast({
+            title: `Failed to upload ${validFiles[i].name}`,
+            type: 'error',
+          });
+        }
       }
-      if (results.length === 0) return;
+      if (pairs.length === 0) return;
 
-      const mediaIds = results.map((r) => r.id);
-      const fileNames = validFiles
-        .slice(0, results.length)
-        .map((f) => f.name);
-      const downloadURLs = results.map((r) => r.downloadURL);
+      const mediaIds = pairs.map((p) => p.result.id);
+      const fileNames = pairs.map((p) => p.file.name);
+      const downloadURLs = pairs.map((p) => p.result.downloadURL);
 
-      // Build summary text and determine content type
-      const imageCount = validFiles.filter((f) =>
-        f.type.startsWith('image/'),
+      // Build summary text and content type from SUCCESSFUL uploads only
+      const imageCount = pairs.filter((p) =>
+        p.file.type.startsWith('image/'),
       ).length;
-      const videoCount = validFiles.filter((f) =>
-        f.type.startsWith('video/'),
+      const videoCount = pairs.filter((p) =>
+        p.file.type.startsWith('video/'),
       ).length;
-      const fileCount = validFiles.filter(
-        (f) => !f.type.startsWith('image/') && !f.type.startsWith('video/'),
+      const fileCount = pairs.filter(
+        (p) => !p.file.type.startsWith('image/') && !p.file.type.startsWith('video/'),
       ).length;
 
       const parts: string[] = [];
@@ -385,17 +391,23 @@ export function TextPortal({ className }: TextPortalProps) {
                 {/* Message content */}
                 <div className='flex items-start gap-2 pl-3.5'>
                   {msg.contentType === 'link' && msg.downloadURLs?.[0] ? (
-                    <div className='flex-1 text-sm'>
+                    <div className='flex flex-1 items-start gap-2 text-sm'>
                       <a
                         href={msg.downloadURLs[0]}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-primary underline-offset-2 hover:underline'
+                        className='text-primary min-w-0 flex-1 underline-offset-2 hover:underline'
                         aria-label={`Open shared link: ${msg.downloadURLs[0]}`}
                       >
                         {getContentTypeIcon('link')}{' '}
                         <span className='break-all'>{msg.downloadURLs[0]}</span>
                       </a>
+                      <CopyButton
+                        textToCopy={msg.downloadURLs[0]}
+                        size='icon'
+                        variant='tertiary'
+                        iconSize={12}
+                      />
                     </div>
                   ) : msg.mediaIds ? (
                     <div className='flex-1 text-sm'>
