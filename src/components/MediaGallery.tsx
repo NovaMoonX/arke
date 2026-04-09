@@ -155,15 +155,18 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                     className='aspect-square w-full object-cover transition-transform group-hover:scale-105'
                   />
                 ) : isVideo ? (
-                  <video
-                    src={item.downloadURL}
-                    className='aspect-square w-full object-cover'
-                    muted
-                    playsInline
-                    preload='metadata'
-                    onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
-                    onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
-                  />
+                  <div className='relative aspect-square w-full overflow-hidden'>
+                    <video
+                      src={item.downloadURL}
+                      className='h-full w-full object-cover'
+                      muted
+                      playsInline
+                      preload='metadata'
+                    />
+                    <div className='absolute inset-0 flex items-center justify-center bg-black/20'>
+                      <VideoIcon className='h-10 w-10 text-white drop-shadow-md' />
+                    </div>
+                  </div>
                 ) : isLink ? (
                   <div className='flex aspect-square w-full flex-col items-center justify-center gap-1 p-2'>
                     <LinkIcon className='h-8 w-8 text-foreground/40' />

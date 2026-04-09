@@ -134,7 +134,7 @@ export function TextPortal({ className }: TextPortalProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-download media for new messages
+  // Auto-download media for new messages (images and videos only)
   useEffect(() => {
     if (!autoDownload || messages.length === 0) return;
 
@@ -143,7 +143,7 @@ export function TextPortal({ className }: TextPortalProps) {
       latestMsg.mediaIds &&
       latestMsg.downloadURLs &&
       latestMsg.deviceId !== deviceId &&
-      latestMsg.contentType !== 'link'
+      (latestMsg.contentType === 'image' || latestMsg.contentType === 'video')
     ) {
       // Only auto-download if the message is recent (within 5 seconds)
       const isRecent = Date.now() - latestMsg.sentAt < 5000;
