@@ -8,18 +8,25 @@ import {
 import { useNavigate } from 'react-router-dom';
 import {
   Textarea,
+  Input,
   Button,
   CopyButton,
   ScrollArea,
+  Toggle,
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
-import { MediaIcon } from '@components/icons/MediaIcon';
+import { TextIcon } from '@components/icons/TextIcon';
+import { LinkIcon } from '@components/icons/LinkIcon';
+import { ImageIcon } from '@components/icons/ImageIcon';
+import { VideoIcon } from '@components/icons/VideoIcon';
+import { FileIcon } from '@components/icons/FileIcon';
 import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { useMediaUpload, type MediaUploadResult } from '@hooks/useMediaUpload';
-import { MAX_FILE_SIZE } from '@lib/firebase/storage';
+import { MAX_FILE_SIZE, MAX_VIDEO_SIZE, saveLinkMetadata } from '@lib/firebase/storage';
+import { auth } from '@lib/firebase';
 
 interface FeedMessage {
   id: string;
@@ -32,13 +39,45 @@ interface FeedMessage {
   mediaIds?: string[];
   fileNames?: string[];
   downloadURLs?: string[];
+  /** Type of shared content for icon display */
+  contentType?: 'text' | 'link' | 'image' | 'video' | 'file' | 'mixed';
 }
+
+type InputMode = 'text' | 'link' | 'media' | 'file';
 
 interface TextPortalProps {
   className?: string;
 }
 
-const ACCEPTED_TYPES = 'image/*,application/pdf';
+const MEDIA_ACCEPTED_TYPES = 'image/*,video/mp4,video/webm,video/quicktime';
+const FILE_ACCEPTED_TYPES = 'application/pdf,application/zip,application/x-zip-compressed,text/plain,text/csv';
+
+const AUTO_DOWNLOAD_KEY = 'arke_auto_download';
+
+function getAutoDownloadDefault(): boolean {
+  try {
+    const stored = localStorage.getItem(AUTO_DOWNLOAD_KEY);
+    if (stored !== null) return stored === 'true';
+  } catch {
+    // ignore
+  }
+  return true;
+}
+
+function getContentTypeIcon(contentType?: string) {
+  switch (contentType) {
+    case 'link':
+      return <LinkIcon className='h-4 w-4 align-text-bottom' />;
+    case 'image':
+      return <ImageIcon className='h-4 w-4 align-text-bottom' />;
+    case 'video':
+      return <VideoIcon className='h-4 w-4 align-text-bottom' />;
+    case 'file':
+      return <FileIcon className='h-4 w-4 align-text-bottom' />;
+    default:
+      return <TextIcon className='h-4 w-4 align-text-bottom' />;
+  }
+}
 
 export function TextPortal({ className }: TextPortalProps) {
   const { session, deviceId, deviceName, deviceColor } = useSessionContext();
@@ -46,13 +85,26 @@ export function TextPortal({ className }: TextPortalProps) {
   const navigate = useNavigate();
   const { uploadMedia, uploading, progress } = useMediaUpload();
   const [draft, setDraft] = useState('');
+  const [linkDraft, setLinkDraft] = useState('');
   const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [uploadIndex, setUploadIndex] = useState({ current: 0, total: 0 });
+  const [inputMode, setInputMode] = useState<InputMode>('text');
+  const [autoDownload, setAutoDownload] = useState(getAutoDownloadDefault);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sessionPin = session?.pin;
+
+  // Persist auto-download preference
+  useEffect(() => {
+    try {
+      localStorage.setItem(AUTO_DOWNLOAD_KEY, String(autoDownload));
+    } catch {
+      // ignore
+    }
+  }, [autoDownload]);
 
   // Subscribe to messages from RTDB
   useEffect(() => {
@@ -82,7 +134,33 @@ export function TextPortal({ className }: TextPortalProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = useCallback(async () => {
+  // Auto-download media for new messages
+  useEffect(() => {
+    if (!autoDownload || messages.length === 0) return;
+
+    const latestMsg = messages[messages.length - 1];
+    if (
+      latestMsg.mediaIds &&
+      latestMsg.downloadURLs &&
+      latestMsg.deviceId !== deviceId &&
+      latestMsg.contentType !== 'link'
+    ) {
+      // Only auto-download if the message is recent (within 5 seconds)
+      const isRecent = Date.now() - latestMsg.sentAt < 5000;
+      if (isRecent) {
+        for (const url of latestMsg.downloadURLs) {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = '';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.click();
+        }
+      }
+    }
+  }, [messages, autoDownload, deviceId]);
+
+  const handleSendText = useCallback(async () => {
     const text = draft.trim();
     if (!text || !database || !sessionPin || !deviceId) return;
 
@@ -95,6 +173,7 @@ export function TextPortal({ className }: TextPortalProps) {
         deviceName,
         color: deviceColor,
         sentAt: Date.now(),
+        contentType: 'text',
       });
       setDraft('');
     } catch {
@@ -104,34 +183,89 @@ export function TextPortal({ className }: TextPortalProps) {
     }
   }, [draft, sessionPin, deviceId, deviceName, deviceColor, addToast]);
 
+  const handleSendLink = useCallback(async () => {
+    const url = linkDraft.trim();
+    if (!url || !database || !sessionPin || !deviceId) return;
+
+    // Basic URL validation
+    let finalUrl = url;
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`;
+    }
+
+    try {
+      new URL(finalUrl);
+    } catch {
+      addToast({ title: 'Please enter a valid URL', type: 'error' });
+      return;
+    }
+
+    setSending(true);
+    try {
+      const userId = auth?.currentUser?.uid;
+      if (!userId) throw new Error('Not authenticated');
+
+      // Save link to media collection
+      const linkId = await saveLinkMetadata(sessionPin, finalUrl, userId);
+
+      const messagesRef = ref(database, `sessions/${sessionPin}/messages`);
+      await push(messagesRef, {
+        text: `Shared a link`,
+        deviceId,
+        deviceName,
+        color: deviceColor,
+        sentAt: Date.now(),
+        contentType: 'link',
+        mediaIds: linkId ? [linkId] : [],
+        downloadURLs: [finalUrl],
+        fileNames: [finalUrl],
+      });
+      setLinkDraft('');
+    } catch {
+      addToast({ title: 'Failed to share link', type: 'error' });
+    } finally {
+      setSending(false);
+    }
+  }, [linkDraft, sessionPin, deviceId, deviceName, deviceColor, addToast]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        handleSend();
+        handleSendText();
       }
     },
-    [handleSend],
+    [handleSendText],
+  );
+
+  const handleLinkKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSendLink();
+      }
+    },
+    [handleSendLink],
   );
 
   const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>, mode: 'media' | 'file') => {
       const files = e.target.files;
       if (!files || files.length === 0 || !database || !sessionPin || !deviceId)
         return;
 
-      // Clone file list before resetting – e.target.files is a live reference
       const selectedFiles = Array.from(files);
-
-      // Reset input so the same file can be selected again
       e.target.value = '';
 
       // Quick client-side size check
       const validFiles: File[] = [];
       for (const file of selectedFiles) {
-        if (file.size > MAX_FILE_SIZE) {
+        const isVideo = file.type.startsWith('video/');
+        const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+        const limitMB = maxSize / (1024 * 1024);
+        if (file.size > maxSize) {
           addToast({
-            title: `${file.name} is too large (max 10MB)`,
+            title: `${file.name} is too large (max ${limitMB}MB)`,
             type: 'error',
           });
         } else {
@@ -156,21 +290,36 @@ export function TextPortal({ className }: TextPortalProps) {
         .map((f) => f.name);
       const downloadURLs = results.map((r) => r.downloadURL);
 
-      // Build summary text
+      // Build summary text and determine content type
       const imageCount = validFiles.filter((f) =>
         f.type.startsWith('image/'),
       ).length;
-      const pdfCount = validFiles.filter(
-        (f) => f.type === 'application/pdf',
+      const videoCount = validFiles.filter((f) =>
+        f.type.startsWith('video/'),
       ).length;
+      const fileCount = validFiles.filter(
+        (f) => !f.type.startsWith('image/') && !f.type.startsWith('video/'),
+      ).length;
+
       const parts: string[] = [];
       if (imageCount > 0) {
         parts.push(`${imageCount} ${imageCount === 1 ? 'image' : 'images'}`);
       }
-      if (pdfCount > 0) {
-        parts.push(`${pdfCount} ${pdfCount === 1 ? 'PDF' : 'PDFs'}`);
+      if (videoCount > 0) {
+        parts.push(`${videoCount} ${videoCount === 1 ? 'video' : 'videos'}`);
+      }
+      if (fileCount > 0) {
+        parts.push(`${fileCount} ${fileCount === 1 ? 'file' : 'files'}`);
       }
       const summaryText = `Shared ${parts.join(' and ')}`;
+
+      // Determine content type for the icon
+      let contentType: FeedMessage['contentType'] = 'file';
+      if (mode === 'media') {
+        if (imageCount > 0 && videoCount === 0) contentType = 'image';
+        else if (videoCount > 0 && imageCount === 0) contentType = 'video';
+        else if (imageCount > 0 && videoCount > 0) contentType = 'mixed';
+      }
 
       // Post a feed message
       try {
@@ -184,6 +333,7 @@ export function TextPortal({ className }: TextPortalProps) {
           mediaIds,
           fileNames,
           downloadURLs,
+          contentType,
         });
       } catch {
         addToast({ title: 'Failed to post media message', type: 'error' });
@@ -193,6 +343,13 @@ export function TextPortal({ className }: TextPortalProps) {
   );
 
   if (!session) return null;
+
+  const inputModes: { mode: InputMode; label: string; icon: React.ReactNode }[] = [
+    { mode: 'text', label: 'Text', icon: <TextIcon className='h-3.5 w-3.5' /> },
+    { mode: 'link', label: 'Link', icon: <LinkIcon className='h-3.5 w-3.5' /> },
+    { mode: 'media', label: 'Media', icon: <ImageIcon className='h-3.5 w-3.5' /> },
+    { mode: 'file', label: 'File', icon: <FileIcon className='h-3.5 w-3.5' /> },
+  ];
 
   return (
     <div className={join('flex min-h-0 flex-1 flex-col', className)} role='region' aria-label='Message portal'>
@@ -227,7 +384,20 @@ export function TextPortal({ className }: TextPortalProps) {
                 </div>
                 {/* Message content */}
                 <div className='flex items-start gap-2 pl-3.5'>
-                  {msg.mediaIds ? (
+                  {msg.contentType === 'link' && msg.downloadURLs?.[0] ? (
+                    <div className='flex-1 text-sm'>
+                      <a
+                        href={msg.downloadURLs[0]}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-primary underline-offset-2 hover:underline'
+                        aria-label={`Open shared link: ${msg.downloadURLs[0]}`}
+                      >
+                        {getContentTypeIcon('link')}{' '}
+                        <span className='break-all'>{msg.downloadURLs[0]}</span>
+                      </a>
+                    </div>
+                  ) : msg.mediaIds ? (
                     <div className='flex-1 text-sm'>
                       {msg.mediaIds.length === 1 ? (
                         <a
@@ -237,7 +407,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           className='text-primary underline-offset-2 hover:underline'
                           aria-label={`Open shared file: ${msg.fileNames?.[0] ?? 'media'}`}
                         >
-                          <MediaIcon className='h-4 w-4 align-text-bottom' /> {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
+                          {getContentTypeIcon(msg.contentType)} {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
                         </a>
                       ) : (
                         <>
@@ -246,7 +416,7 @@ export function TextPortal({ className }: TextPortalProps) {
                             className='text-left'
                             aria-label='View all shared media'
                           >
-                            <MediaIcon className='h-4 w-4 align-text-bottom' />{' '}
+                            {getContentTypeIcon(msg.contentType)}{' '}
                             <span className='text-primary underline-offset-2 hover:underline'>
                               {msg.text} — View all media
                             </span>
@@ -315,60 +485,154 @@ export function TextPortal({ className }: TextPortalProps) {
 
       {/* Compose area — always at the bottom */}
       <div className='border-foreground/10 shrink-0 space-y-2 border-t pt-3 pb-4'>
-        {/* Device identity indicator */}
-        <div className='flex items-center gap-1.5'>
-          <span
-            className='inline-block h-2 w-2 rounded-full'
-            style={{ backgroundColor: deviceColor }}
-            aria-hidden='true'
-          />
-          <span className='text-xs font-medium' style={{ color: deviceColor }}>
-            {deviceName}
-          </span>
-        </div>
-
-        <Textarea
-          autoExpand
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder='Type a message…'
-          rows={2}
-          className='max-h-32'
-          aria-label='Message input'
-        />
-
+        {/* Auto-download toggle */}
         <div className='flex items-center justify-between'>
-          {/* Attach file button */}
-          <Button
-            size='sm'
-            variant='tertiary'
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            aria-label='Attach media files'
-          >
-            <MediaIcon className='mr-1 h-4 w-4' />
-            Media
-          </Button>
-          <input
-            ref={fileInputRef}
-            type='file'
-            accept={ACCEPTED_TYPES}
-            multiple
-            onChange={handleFileSelect}
-            className='hidden'
-            aria-hidden='true'
-          />
-
-          <Button
-            onClick={handleSend}
-            disabled={!draft.trim() || sending || !deviceId}
-            size='sm'
-            aria-label='Send message'
-          >
-            {sending ? 'Sending…' : 'Send'}
-          </Button>
+          <div className='flex items-center gap-1.5'>
+            <span
+              className='inline-block h-2 w-2 rounded-full'
+              style={{ backgroundColor: deviceColor }}
+              aria-hidden='true'
+            />
+            <span className='text-xs font-medium' style={{ color: deviceColor }}>
+              {deviceName}
+            </span>
+          </div>
+          <div className='flex items-center gap-1.5'>
+            <span className='text-foreground/50 text-xs'>Auto-download</span>
+            <Toggle
+              checked={autoDownload}
+              onCheckedChange={setAutoDownload}
+              size='sm'
+              aria-label='Toggle auto-download of shared media'
+            />
+          </div>
         </div>
+
+        {/* Input mode selector */}
+        <div className='flex gap-1' role='tablist' aria-label='Input type'>
+          {inputModes.map(({ mode, label, icon }) => (
+            <button
+              key={mode}
+              role='tab'
+              aria-selected={inputMode === mode}
+              onClick={() => setInputMode(mode)}
+              className={join(
+                'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                inputMode === mode
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-foreground/5 text-foreground/60 hover:bg-foreground/10',
+              )}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Text input */}
+        {inputMode === 'text' && (
+          <>
+            <Textarea
+              autoExpand
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder='Type a message…'
+              rows={2}
+              className='max-h-32'
+              aria-label='Message input'
+            />
+            <div className='flex justify-end'>
+              <Button
+                onClick={handleSendText}
+                disabled={!draft.trim() || sending || !deviceId}
+                size='sm'
+                aria-label='Send message'
+              >
+                {sending ? 'Sending…' : 'Send'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Link input */}
+        {inputMode === 'link' && (
+          <>
+            <Input
+              value={linkDraft}
+              onChange={(e) => setLinkDraft(e.target.value)}
+              onKeyDown={handleLinkKeyDown}
+              placeholder='Paste or type a URL…'
+              aria-label='Link input'
+            />
+            <div className='flex justify-end'>
+              <Button
+                onClick={handleSendLink}
+                disabled={!linkDraft.trim() || sending || !deviceId}
+                size='sm'
+                aria-label='Share link'
+              >
+                {sending ? 'Sharing…' : 'Share Link'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Media input (images + videos) */}
+        {inputMode === 'media' && (
+          <>
+            <Button
+              variant='secondary'
+              className='w-full'
+              onClick={() => mediaInputRef.current?.click()}
+              disabled={uploading}
+              aria-label='Select images or videos to share'
+            >
+              <ImageIcon className='mr-1.5 h-4 w-4' />
+              Select Images or Videos
+            </Button>
+            <p className='text-foreground/40 text-center text-xs'>
+              Images up to 10MB · Videos up to 50MB
+            </p>
+            <input
+              ref={mediaInputRef}
+              type='file'
+              accept={MEDIA_ACCEPTED_TYPES}
+              multiple
+              onChange={(e) => handleFileSelect(e, 'media')}
+              className='hidden'
+              aria-hidden='true'
+            />
+          </>
+        )}
+
+        {/* File input */}
+        {inputMode === 'file' && (
+          <>
+            <Button
+              variant='secondary'
+              className='w-full'
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              aria-label='Select files to share'
+            >
+              <FileIcon className='mr-1.5 h-4 w-4' />
+              Select Files
+            </Button>
+            <p className='text-foreground/40 text-center text-xs'>
+              PDFs and documents up to 10MB
+            </p>
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept={FILE_ACCEPTED_TYPES}
+              multiple
+              onChange={(e) => handleFileSelect(e, 'file')}
+              className='hidden'
+              aria-hidden='true'
+            />
+          </>
+        )}
       </div>
     </div>
   );
