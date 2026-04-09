@@ -4,6 +4,7 @@ import {
   Input,
   Modal,
   Callout,
+  Popover,
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
@@ -83,10 +84,31 @@ export function SessionManager({ className }: SessionManagerProps) {
             </span>
           )}
 
-          {/* Device count */}
-          <span className='text-xs text-foreground/60'>
-            {participants.length} {participants.length === 1 ? 'device' : 'devices'}
-          </span>
+          {/* Device count — clickable to show participants */}
+          <Popover
+            trigger={
+              <button className='text-xs text-foreground/60 underline-offset-2 hover:underline'>
+                {participants.length} {participants.length === 1 ? 'device' : 'devices'}
+              </button>
+            }
+            placement='bottom'
+            alignment='start'
+            className='max-w-60'
+          >
+            <div className='space-y-1.5 p-3'>
+              <p className='text-xs font-semibold text-foreground/80'>Connected Devices</p>
+              {participants.map((p) => (
+                <div key={p.id} className='flex items-center gap-1.5'>
+                  <span
+                    className='inline-block h-2 w-2 shrink-0 rounded-full'
+                    style={{ backgroundColor: p.color || '#888' }}
+                    aria-hidden='true'
+                  />
+                  <span className='text-xs text-foreground/70'>{p.name || 'Unknown'}</span>
+                </div>
+              ))}
+            </div>
+          </Popover>
 
           {/* Spacer */}
           <span className='flex-1' />

@@ -13,20 +13,58 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 const ACCEPTED_TYPES = [
+  // Images
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
   'image/svg+xml',
+  'image/bmp',
+  'image/tiff',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+  // Videos
   'video/mp4',
   'video/webm',
   'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
+  // Documents
   'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // Archives
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/gzip',
+  'application/x-tar',
+  'application/x-7z-compressed',
+  'application/x-rar-compressed',
+  // Text / Data
+  'text/plain',
+  'text/csv',
+  'text/html',
+  'text/markdown',
+  'application/json',
+  'application/xml',
+  // Audio
+  'audio/mpeg',
+  'audio/wav',
+  'audio/ogg',
+  'audio/webm',
+  'audio/aac',
+  'audio/flac',
+  'audio/x-m4a',
 ];
 
-const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
 
-export type MediaType = 'image' | 'video' | 'file' | 'link';
+export type MediaType = 'image' | 'video' | 'audio' | 'file' | 'link';
 
 export interface MediaMetadata {
   id: string;
@@ -46,8 +84,8 @@ export interface MediaMetadata {
  * Returns an error message string, or null if valid.
  */
 export function validateFile(file: File): string | null {
-  const isVideo = VIDEO_TYPES.includes(file.type);
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+  const isLargeMedia = VIDEO_TYPES.includes(file.type) || file.type.startsWith('audio/');
+  const maxSize = isLargeMedia ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
 
   if (file.size > maxSize) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
@@ -56,7 +94,7 @@ export function validateFile(file: File): string | null {
   }
 
   if (!ACCEPTED_TYPES.includes(file.type)) {
-    return `Unsupported file type (${file.type || 'unknown'}). Accepted: images, videos, and PDFs.`;
+    return `Unsupported file type (${file.type || 'unknown'}). Accepted: images, videos, documents, audio, and archives.`;
   }
 
   return null;
@@ -68,6 +106,7 @@ export function validateFile(file: File): string | null {
 export function deriveMediaType(mimeType: string): MediaType {
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
   return 'file';
 }
 
