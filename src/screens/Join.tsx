@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { useSessionContext } from '@hooks/useSessionContext';
@@ -7,9 +7,11 @@ function Join() {
   const { pin } = useParams<{ pin: string }>();
   const navigate = useNavigate();
   const { session, joinSession, loading, authenticating, error } = useSessionContext();
+  const hasAttemptedJoin = useRef(false);
 
   useEffect(() => {
-    if (pin && !session && !loading && !authenticating) {
+    if (pin && !session && !loading && !authenticating && !hasAttemptedJoin.current) {
+      hasAttemptedJoin.current = true;
       joinSession(pin);
     }
   }, [pin, session, loading, authenticating, joinSession]);
@@ -20,10 +22,13 @@ function Join() {
     }
   }, [session, navigate]);
 
+  // Show loading until join has been attempted and completed
+  const isJoining = authenticating || loading || (!hasAttemptedJoin.current && !error);
+
   return (
     <div className='page flex flex-col items-center justify-center'>
       <div className='max-w-md space-y-4 px-4 text-center'>
-        {(loading || authenticating) && (
+        {isJoining && (
           <>
             <div
               className='mx-auto h-16 w-16 animate-spin rounded-full border-4 border-foreground/20 border-t-accent'
@@ -36,7 +41,7 @@ function Join() {
           </>
         )}
 
-        {error && !authenticating && (
+        {error && !isJoining && (
           <div className='space-y-4' role='alert'>
             <p className='text-lg font-medium text-destructive'>{error}</p>
             <Button
