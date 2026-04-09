@@ -25,7 +25,7 @@ const STEPS: Step[] = [
     emoji: '📤',
   },
   {
-    title: 'Secure & Ephemeral',
+    title: 'Secure & Private',
     description:
       'Sessions automatically expire after 1 hour. No accounts needed — your data stays private and is never stored permanently.',
     emoji: '🔒',

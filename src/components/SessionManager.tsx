@@ -13,10 +13,9 @@ import { QRCodeIcon } from '@components/icons/QRCodeIcon';
 
 interface SessionManagerProps {
   className?: string;
-  onOpenSettings?: () => void;
 }
 
-export function SessionManager({ className, onOpenSettings }: SessionManagerProps) {
+export function SessionManager({ className }: SessionManagerProps) {
   const {
     session,
     isHost,
@@ -77,19 +76,6 @@ export function SessionManager({ className, onOpenSettings }: SessionManagerProp
 
           {/* Spacer */}
           <span className='flex-1' />
-
-          {/* Settings */}
-          {onOpenSettings && (
-            <Button
-              size='sm'
-              variant='tertiary'
-              onClick={onOpenSettings}
-              className='text-xs'
-              aria-label='Session settings'
-            >
-              <SettingsIcon className='h-4 w-4' />
-            </Button>
-          )}
 
           {/* QR + Leave */}
           {isHost && (
@@ -176,22 +162,5 @@ export function SessionManager({ className, onOpenSettings }: SessionManagerProp
         </Button>
       </div>
     </div>
-  );
-}
-
-/** Inline settings gear icon */
-function SettingsIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns='http://www.w3.org/2000/svg'
-      viewBox='0 0 15 15'
-      fill='none'
-      className={className}
-    >
-      <path
-        d='M7.07.65a.85.85 0 0 0-.838.71l-.198 1.192a4.926 4.926 0 0 0-.866.5L4.09 2.61a.85.85 0 0 0-1.012.377l-.93 1.61a.85.85 0 0 0 .174 1.087l.98.832a4.979 4.979 0 0 0 0 .999l-.98.832a.85.85 0 0 0-.174 1.088l.93 1.61a.85.85 0 0 0 1.012.376l1.178-.442a4.926 4.926 0 0 0 .866.5l.198 1.192a.85.85 0 0 0 .838.71h1.86a.85.85 0 0 0 .838-.71l.198-1.192c.31-.14.6-.307.866-.5l1.178.442a.85.85 0 0 0 1.012-.377l.93-1.61a.85.85 0 0 0-.174-1.087l-.98-.832a4.978 4.978 0 0 0 0-.999l.98-.832a.85.85 0 0 0 .174-1.088l-.93-1.61a.85.85 0 0 0-1.012-.376l-1.178.442a4.926 4.926 0 0 0-.866-.5l-.198-1.192A.85.85 0 0 0 8.93.65H7.07ZM8 9.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'
-        fill='currentColor'
-      />
-    </svg>
   );
 }

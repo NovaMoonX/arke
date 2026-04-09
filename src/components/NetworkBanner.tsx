@@ -5,6 +5,7 @@ import { useAutoReconnect, type ReconnectStatus } from '@hooks/useAutoReconnect'
 /**
  * Thin banner that appears at the top of the viewport when the network
  * is disconnected or Firebase is reconnecting.
+ * Rendered inside the page flow so it pushes content down.
  */
 export function NetworkBanner() {
   const { status, online } = useAutoReconnect();
@@ -20,7 +21,7 @@ export function NetworkBanner() {
       role='alert'
       aria-live='assertive'
       className={join(
-        'fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-2 px-4 py-2 text-center text-sm font-medium text-white',
+        'flex shrink-0 items-center justify-center gap-2 px-4 py-2 text-center text-sm font-medium text-white',
         variant === 'error' && 'bg-destructive',
         variant === 'warning' && 'bg-yellow-600',
       )}
