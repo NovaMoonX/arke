@@ -127,7 +127,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
           {filter === 'all' ? 'No media shared yet.' : `No ${filter}s shared yet.`}
         </p>
       ) : (
-        <div className='grid grid-cols-2 gap-3' role='list' aria-label='Shared media items'>
+        <div className='grid grid-cols-2 gap-3' role='list' aria-label='Shared items'>
           {filteredItems.map((item) => {
             const itemType = deriveMediaTypeFromItem(item);
             const isImage = itemType === 'image';

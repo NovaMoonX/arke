@@ -10,4 +10,4 @@ export const APP_DESCRIPTION = '';
  *   icon-07.svg (double arrows), icon-08.svg (sync arrows),
  *   icon-09.svg (constellation), icon-10.svg (portal)
  */
-export const APP_ICON_PATH = '/app-icons/icon-01.svg';
+export const APP_ICON_PATH = '/app-icons/icon-07.svg';

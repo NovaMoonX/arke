@@ -4,7 +4,6 @@ import {
   Input,
   Modal,
   Callout,
-  CopyButton,
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
@@ -71,20 +70,10 @@ export function SessionManager({ className }: SessionManagerProps) {
     return (
       <div className={join('space-y-2', className)} role='region' aria-label='Active session'>
         <div className='flex items-center gap-2 rounded-lg border border-foreground/10 px-3 py-2'>
-          {/* Status dot + PIN */}
+          {/* Status indicator */}
           <span
             className='h-2 w-2 shrink-0 rounded-full bg-green-500'
             aria-hidden='true'
-          />
-          <span className='font-mono text-sm font-bold tracking-widest'>
-            {session.pin}
-          </span>
-
-          <CopyButton
-            textToCopy={session.pin}
-            size='icon'
-            variant='tertiary'
-            iconSize={12}
           />
 
           {/* Host badge */}
@@ -95,15 +84,14 @@ export function SessionManager({ className }: SessionManagerProps) {
           )}
 
           {/* Device count */}
-          <span className='text-xs text-foreground/50'>
-            · {participants.length}{' '}
-            {participants.length === 1 ? 'device' : 'devices'}
+          <span className='text-xs text-foreground/60'>
+            {participants.length} {participants.length === 1 ? 'device' : 'devices'}
           </span>
 
           {/* Spacer */}
           <span className='flex-1' />
 
-          {/* QR + Leave/End */}
+          {/* Actions: QR + Leave/End */}
           {isHost && (
             <Button
               size='sm'

@@ -414,11 +414,11 @@ export function TextPortal({ className }: TextPortalProps) {
                           <button
                             onClick={() => navigate('/media')}
                             className='text-left'
-                            aria-label='View all shared media'
+                            aria-label='View all shared items'
                           >
                             {getContentTypeIcon(msg.contentType)}{' '}
                             <span className='text-primary underline-offset-2 hover:underline'>
-                              {msg.text} — View all media
+                              {msg.text} — View all shared items
                             </span>
                           </button>
                           {msg.fileNames && msg.fileNames.length > 0 && (
@@ -503,7 +503,7 @@ export function TextPortal({ className }: TextPortalProps) {
               checked={autoDownload}
               onCheckedChange={setAutoDownload}
               size='sm'
-              aria-label='Toggle auto-download of shared media'
+              aria-label='Toggle auto-download of shared items'
             />
           </div>
         </div>
