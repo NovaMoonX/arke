@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Paper Plane -->
+  <rect width="48" height="48" rx="10" fill="#863bff"/>
+  <path d="M10 12l28 12-28 12 4-12zm4 3.5l16.5 8.5-16.5 8.5 2.8-8.5z" fill="#fff" fill-rule="evenodd"/>
+</svg>
