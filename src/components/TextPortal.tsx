@@ -334,7 +334,7 @@ export function TextPortal({ className }: TextPortalProps) {
         if (mediaTypeCount > 1) contentType = 'mixed';
         else if (imageCount > 0) contentType = 'image';
         else if (videoCount > 0) contentType = 'video';
-        else if (audioCount > 0) contentType = 'file';
+        else if (audioCount > 0) contentType = 'mixed';
       }
 
       // Post a feed message

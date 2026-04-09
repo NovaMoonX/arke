@@ -103,10 +103,20 @@ function Join() {
               </span>
             </p>
             {participants.length > 0 && (
-              <p className='text-xs text-foreground/40'>
-                {participants.length} {participants.length === 1 ? 'device' : 'devices'} in session:{' '}
-                {participants.map((p) => p.name || 'Unknown').join(', ')}
-              </p>
+              <div aria-label='Session participants' role='group'>
+                <p className='text-xs text-foreground/40'>
+                  <span aria-label={`${participants.length} ${participants.length === 1 ? 'device' : 'devices'} in session`}>
+                    {participants.length} {participants.length === 1 ? 'device' : 'devices'} in session:
+                  </span>
+                </p>
+                <ul className='mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1' aria-label='Connected device names'>
+                  {participants.map((p) => (
+                    <li key={p.id} className='text-xs text-foreground/50'>
+                      {p.name || 'Unknown'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}
