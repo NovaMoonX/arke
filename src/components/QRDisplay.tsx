@@ -23,10 +23,15 @@ export function QRDisplay({ pin, className }: QRDisplayProps) {
         <p className='font-mono text-4xl font-bold tracking-widest'>{pin}</p>
       </div>
 
-      {/* Copy Button */}
-      <CopyButton textToCopy={pin} variant='secondary' showCopyText>
-        Copy PIN
-      </CopyButton>
+      {/* Copy Buttons */}
+      <div className='flex flex-col items-center gap-2'>
+        <CopyButton textToCopy={joinUrl} variant='secondary' showCopyText>
+          Copy Link
+        </CopyButton>
+        <CopyButton textToCopy={pin} variant='tertiary' size='sm' showCopyText>
+          Copy PIN only
+        </CopyButton>
+      </div>
 
       {/* Join URL */}
       <p className='max-w-xs break-all text-center text-xs text-foreground/40'>

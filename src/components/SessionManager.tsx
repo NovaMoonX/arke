@@ -24,6 +24,7 @@ export function SessionManager({ className }: SessionManagerProps) {
     joinSession,
     leaveSession,
     loading,
+    authenticating,
     error,
   } = useSessionContext();
 
@@ -49,10 +50,13 @@ export function SessionManager({ className }: SessionManagerProps) {
   // Active session — compact inline bar
   if (session) {
     return (
-      <div className={join('space-y-2', className)}>
+      <div className={join('space-y-2', className)} role='region' aria-label='Active session'>
         <div className='flex items-center gap-2 rounded-lg border border-foreground/10 px-3 py-2'>
           {/* Status dot + PIN */}
-          <span className='h-2 w-2 shrink-0 rounded-full bg-green-500' />
+          <span
+            className='h-2 w-2 shrink-0 rounded-full bg-green-500'
+            aria-hidden='true'
+          />
           <span className='font-mono text-sm font-bold tracking-widest'>
             {session.pin}
           </span>
@@ -80,6 +84,7 @@ export function SessionManager({ className }: SessionManagerProps) {
               variant='tertiary'
               onClick={() => setShowQR(true)}
               className='text-xs'
+              aria-label='Show QR code'
             >
               <QRCodeIcon className='h-4 w-4' />
             </Button>
@@ -89,6 +94,7 @@ export function SessionManager({ className }: SessionManagerProps) {
             variant='destructive'
             onClick={handleLeaveSession}
             className='text-xs'
+            aria-label='Leave session'
           >
             Leave
           </Button>
@@ -112,23 +118,24 @@ export function SessionManager({ className }: SessionManagerProps) {
 
   // No session view
   return (
-    <div className={join('space-y-6', className)}>
+    <div className={join('space-y-6', className)} role='region' aria-label='Session controls'>
       {/* Error Display */}
-      {error && (
+      {error && !authenticating && (
         <Callout variant='destructive' icon={null} description={error} />
       )}
 
       {/* Start Sharing */}
       <Button
         onClick={handleCreateSession}
-        disabled={loading}
+        disabled={loading || authenticating}
         className='w-full'
+        aria-label='Create a new sharing session'
       >
         {loading ? 'Creating...' : 'Start Sharing'}
       </Button>
 
       {/* Divider */}
-      <div className='flex items-center gap-3'>
+      <div className='flex items-center gap-3' aria-hidden='true'>
         <div className='h-px flex-1 bg-foreground/10' />
         <span className='text-sm text-foreground/40'>or</span>
         <div className='h-px flex-1 bg-foreground/10' />
@@ -142,12 +149,14 @@ export function SessionManager({ className }: SessionManagerProps) {
           placeholder='Enter 6-digit PIN'
           maxLength={6}
           className='text-center font-mono text-lg tracking-widest'
+          aria-label='Session PIN'
         />
         <Button
           onClick={handleJoinSession}
-          disabled={loading || pinInput.trim().length !== 6}
+          disabled={loading || authenticating || pinInput.trim().length !== 6}
           variant='secondary'
           className='w-full'
+          aria-label='Join an existing session'
         >
           {loading ? 'Joining...' : 'Join Session'}
         </Button>

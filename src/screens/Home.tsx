@@ -2,6 +2,7 @@ import { APP_TITLE, APP_DESCRIPTION } from '@lib/app';
 import { SessionManager } from '@components/SessionManager';
 import { TextPortal } from '@components/TextPortal';
 import { MediaSummary } from '@components/MediaSummary';
+import { OnboardingFlow } from '@components/OnboardingFlow';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Home() {
@@ -39,6 +40,7 @@ function Home() {
 				</div>
 				<SessionManager />
 			</div>
+			<OnboardingFlow />
 		</div>
 	);
 }

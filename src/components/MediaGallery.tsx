@@ -69,7 +69,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
   const currentUserId = auth?.currentUser?.uid;
 
   return (
-    <div className={join('space-y-3', className)}>
+    <div className={join('space-y-3', className)} role='region' aria-label='Media gallery'>
       {error && (
         <Callout variant='destructive' icon={null} description={error} />
       )}
@@ -79,7 +79,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
           No media shared yet.
         </p>
       ) : (
-        <div className='grid grid-cols-2 gap-3'>
+        <div className='grid grid-cols-2 gap-3' role='list' aria-label='Shared media items'>
           {items.map((item) => {
             const isImage = item.fileType.startsWith('image/');
             const isPDF = item.fileType === 'application/pdf';
@@ -92,6 +92,8 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                 target='_blank'
                 rel='noopener noreferrer'
                 className='group relative overflow-hidden rounded-lg border border-foreground/10 bg-foreground/5'
+                role='listitem'
+                aria-label={`Open ${item.fileName}`}
               >
                 {/* Preview */}
                 {isImage ? (
@@ -130,6 +132,7 @@ export function MediaGallery({ className }: MediaGalleryProps) {
                     disabled={deleting === item.id}
                     onClick={(e) => handleDelete(e, item)}
                     className='absolute right-1 top-1 h-7 w-7 md:opacity-0 transition-opacity group-hover:opacity-100'
+                    aria-label={`Delete ${item.fileName}`}
                   >
                     <Trash className='h-3 w-3' />
                   </Button>

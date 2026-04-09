@@ -1,7 +1,7 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getDatabase } from 'firebase/database';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getDatabase, type Database } from 'firebase/database';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -13,12 +13,21 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let database: Database | null = null;
+let storage: FirebaseStorage | null = null;
 
-const storage = getStorage(app);
-
-const database = getDatabase(app);
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  database = getDatabase(app);
+  storage = getStorage(app);
+} catch {
+  // Firebase initialization failed (e.g. missing/invalid config).
+  // The app will degrade gracefully — features requiring Firebase will be
+  // disabled and appropriate error messages will be shown to the user.
+}
 
 export { auth, database, storage };
 export default app;

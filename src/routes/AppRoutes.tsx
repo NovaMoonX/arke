@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 
 import Home from '@screens/Home';
+import RouteError from '@screens/RouteError';
 import Layout from '@ui/Layout';
 import Loading from '@ui/Loading';
 
@@ -8,6 +9,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <RouteError />,
     children: [
       {
         index: true,
