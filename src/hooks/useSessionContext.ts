@@ -9,6 +9,7 @@ export interface SessionContextValue {
   createSession: () => Promise<void>;
   joinSession: (pin: string) => Promise<void>;
   leaveSession: () => Promise<void>;
+  endSession: () => Promise<void>;
   loading: boolean;
   authenticating: boolean;
   error: string | null;

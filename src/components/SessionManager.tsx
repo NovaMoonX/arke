@@ -4,9 +4,9 @@ import {
   Input,
   Modal,
   Callout,
-  CopyButton,
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
+import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
 import { useSessionContext } from '@hooks/useSessionContext';
 import { QRDisplay } from '@components/QRDisplay';
 import { QRCodeIcon } from '@components/icons/QRCodeIcon';
@@ -23,11 +23,13 @@ export function SessionManager({ className }: SessionManagerProps) {
     createSession,
     joinSession,
     leaveSession,
+    endSession,
     loading,
     authenticating,
     error,
   } = useSessionContext();
 
+  const { confirm } = useActionModal();
   const [pinInput, setPinInput] = useState('');
   const [showQR, setShowQR] = useState(false);
 
@@ -47,37 +49,49 @@ export function SessionManager({ className }: SessionManagerProps) {
     await leaveSession();
   };
 
+  const handleEndSession = async () => {
+    const confirmed = await confirm({
+      title: 'End Session',
+      message:
+        'This will terminate the session for all connected devices. All shared messages and media will be permanently removed.',
+      confirmText: 'End Session',
+      cancelText: 'Cancel',
+      destructive: true,
+    });
+
+    if (confirmed) {
+      setShowQR(false);
+      await endSession();
+    }
+  };
+
   // Active session — compact inline bar
   if (session) {
     return (
       <div className={join('space-y-2', className)} role='region' aria-label='Active session'>
         <div className='flex items-center gap-2 rounded-lg border border-foreground/10 px-3 py-2'>
-          {/* Status dot + PIN */}
+          {/* Status indicator */}
           <span
             className='h-2 w-2 shrink-0 rounded-full bg-green-500'
             aria-hidden='true'
           />
-          <span className='font-mono text-sm font-bold tracking-widest'>
-            {session.pin}
-          </span>
 
-          <CopyButton
-            textToCopy={session.pin}
-            size='icon'
-            variant='tertiary'
-            iconSize={12}
-          />
+          {/* Host badge */}
+          {isHost && (
+            <span className='rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary'>
+              Host
+            </span>
+          )}
 
           {/* Device count */}
-          <span className='text-xs text-foreground/50'>
-            · {participants.length}{' '}
-            {participants.length === 1 ? 'device' : 'devices'}
+          <span className='text-xs text-foreground/60'>
+            {participants.length} {participants.length === 1 ? 'device' : 'devices'}
           </span>
 
           {/* Spacer */}
           <span className='flex-1' />
 
-          {/* QR + Leave */}
+          {/* Actions: QR + Leave/End */}
           {isHost && (
             <Button
               size='sm'
@@ -89,15 +103,27 @@ export function SessionManager({ className }: SessionManagerProps) {
               <QRCodeIcon className='h-4 w-4' />
             </Button>
           )}
-          <Button
-            size='sm'
-            variant='destructive'
-            onClick={handleLeaveSession}
-            className='text-xs'
-            aria-label='Leave session'
-          >
-            Leave
-          </Button>
+          {isHost ? (
+            <Button
+              size='sm'
+              variant='destructive'
+              onClick={handleEndSession}
+              className='text-xs'
+              aria-label='End session for all'
+            >
+              End Session
+            </Button>
+          ) : (
+            <Button
+              size='sm'
+              variant='destructive'
+              onClick={handleLeaveSession}
+              className='text-xs'
+              aria-label='Leave session'
+            >
+              Leave
+            </Button>
+          )}
         </div>
 
         {/* QR modal */}

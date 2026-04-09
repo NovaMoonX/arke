@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Sync / Circular Arrows -->
+  <rect width="48" height="48" rx="10" fill="#863bff"/>
+  <path d="M34 16a12 12 0 01.5 15" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M14 32a12 12 0 01-.5-15" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>
+  <polygon points="36,12 38,19 31,18" fill="#fff"/>
+  <polygon points="12,36 10,29 17,30" fill="#fff"/>
+</svg>

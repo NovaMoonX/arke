@@ -10,6 +10,7 @@ import { ref as dbRef, push, set, remove, get } from 'firebase/database';
 import { storage, database } from '@lib/firebase';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 const ACCEPTED_TYPES = [
   'image/jpeg',
@@ -17,8 +18,15 @@ const ACCEPTED_TYPES = [
   'image/gif',
   'image/webp',
   'image/svg+xml',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
   'application/pdf',
 ];
+
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+export type MediaType = 'image' | 'video' | 'file' | 'link';
 
 export interface MediaMetadata {
   id: string;
@@ -29,6 +37,8 @@ export interface MediaMetadata {
   storagePath: string;
   uploadedBy: string;
   uploadedAt: number;
+  /** Categorises the media for filtering */
+  mediaType?: MediaType;
 }
 
 /**
@@ -36,16 +46,29 @@ export interface MediaMetadata {
  * Returns an error message string, or null if valid.
  */
 export function validateFile(file: File): string | null {
-  if (file.size > MAX_FILE_SIZE) {
+  const isVideo = VIDEO_TYPES.includes(file.type);
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+
+  if (file.size > maxSize) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    return `File too large (${sizeMB}MB). Maximum size is 10MB.`;
+    const limitMB = maxSize / (1024 * 1024);
+    return `File too large (${sizeMB}MB). Maximum size is ${limitMB}MB.`;
   }
 
   if (!ACCEPTED_TYPES.includes(file.type)) {
-    return `Unsupported file type (${file.type || 'unknown'}). Accepted: images and PDFs.`;
+    return `Unsupported file type (${file.type || 'unknown'}). Accepted: images, videos, and PDFs.`;
   }
 
   return null;
+}
+
+/**
+ * Derive the media type category from a MIME type string.
+ */
+export function deriveMediaType(mimeType: string): MediaType {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'file';
 }
 
 /**
@@ -103,6 +126,37 @@ export async function saveMediaMetadata(
   if (!id) return null;
 
   await set(newRef, { ...metadata, id });
+  return id;
+}
+
+/**
+ * Save a shared link to the media collection in RTDB.
+ */
+export async function saveLinkMetadata(
+  sessionPin: string,
+  url: string,
+  userId: string,
+): Promise<string | null> {
+  if (!database) return null;
+
+  const mediaRef = dbRef(database, `sessions/${sessionPin}/media`);
+  const newRef = push(mediaRef);
+  const id = newRef.key;
+  if (!id) return null;
+
+  const metadata: MediaMetadata = {
+    id,
+    fileName: url,
+    fileType: 'text/uri-list',
+    fileSize: 0,
+    downloadURL: url,
+    storagePath: '',
+    uploadedBy: userId,
+    uploadedAt: Date.now(),
+    mediaType: 'link',
+  };
+
+  await set(newRef, metadata);
   return id;
 }
 

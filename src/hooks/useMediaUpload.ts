@@ -6,6 +6,7 @@ import {
   validateFile,
   uploadFile,
   saveMediaMetadata,
+  deriveMediaType,
 } from '@lib/firebase/storage';
 
 interface UploadState {
@@ -89,6 +90,7 @@ export function useMediaUpload(): UseMediaUploadReturn {
                 storagePath: task.snapshot.ref.fullPath,
                 uploadedBy: userId,
                 uploadedAt: Date.now(),
+                mediaType: deriveMediaType(file.type),
               });
 
               setState({ uploading: false, progress: 100, error: null });

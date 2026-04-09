@@ -12,6 +12,7 @@ import {
 } from 'firebase/database';
 import { auth, database } from '@lib/firebase';
 import { SESSION_TTL } from '@lib/firebase/constants';
+import { cleanupSessionMedia } from '@lib/firebase/storage';
 import type { Session } from '@lib/types';
 import type { Participant } from '@lib/types';
 import { getDeviceIdentity } from '@utils/deviceIdentity';
@@ -25,6 +26,7 @@ interface UseSessionReturn {
   createSession: () => Promise<void>;
   joinSession: (pin: string) => Promise<void>;
   leaveSession: () => Promise<void>;
+  endSession: () => Promise<void>;
   loading: boolean;
   authenticating: boolean;
   error: string | null;
@@ -317,6 +319,32 @@ export function useSession(): UseSessionReturn {
     cleanup();
   }, [userId, isHost, cleanup]);
 
+  /**
+   * Host-only: end the session for everyone. Removes the entire session node
+   * and cleans up associated media from Storage.
+   */
+  const endSession = useCallback(async () => {
+    if (!userId || !sessionPinRef.current || !database || !isHost) return;
+
+    const pin = sessionPinRef.current;
+
+    try {
+      // Clean up media files from Storage
+      await cleanupSessionMedia(pin);
+
+      // Remove the entire session node from RTDB (kicks everyone)
+      const sessionRef = ref(database, `sessions/${pin}`);
+      await remove(sessionRef);
+    } catch {
+      // Silently fail on cleanup
+    }
+
+    setSession(null);
+    setIsHost(false);
+    setParticipants([]);
+    cleanup();
+  }, [userId, isHost, cleanup]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -369,6 +397,7 @@ export function useSession(): UseSessionReturn {
     createSession,
     joinSession,
     leaveSession,
+    endSession,
     loading,
     authenticating,
     error,

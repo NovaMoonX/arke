@@ -36,7 +36,7 @@ function Media() {
           >
             <ChevronLeft className='h-4 w-4' />
           </Button>
-          <h1 className='text-xl font-bold'>Shared Media</h1>
+          <h1 className='text-xl font-bold pb-2'>Shared Items</h1>
         </div>
 
         <MediaGallery />
