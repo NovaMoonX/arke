@@ -2,6 +2,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { getDatabase, type Database } from "firebase-admin/database";
 import { getStorage } from "firebase-admin/storage";
+import type { Bucket } from "@google-cloud/storage";
 
 initializeApp();
 
@@ -73,7 +74,7 @@ export const cleanupExpiredSessions = onSchedule("every 1 hours", async () => {
  */
 async function deleteSession(
   db: Database,
-  bucket: ReturnType<typeof getStorage>["bucket"] extends (...args: never[]) => infer R ? R : never,
+  bucket: Bucket,
   pin: string
 ): Promise<void> {
   // 1. Delete all files in Storage under sessions/{pin}/media/
