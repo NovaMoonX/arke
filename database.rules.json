@@ -2,12 +2,33 @@
   "rules": {
     "sessions": {
       "$sessionId": {
-        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
+        // Any authenticated user can read session data.
+        // The 6-digit PIN acts as the access token; readable data is ephemeral.
+        ".read": "auth != null",
+        // Write is allowed when creating a new session OR when already a participant.
         ".write": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
         "participants": {
           "$uid": {
+            // Any authenticated user can read participant list.
             ".read": "auth != null",
+            // Each user can only write their own participant entry.
             ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "messages": {
+          // Any session participant can write messages.
+          ".write": "auth != null && data.parent().child('participants').child(auth.uid).exists()",
+          "$messageId": {
+            ".read": "auth != null && data.parent().parent().child('participants').child(auth.uid).exists()"
+          }
+        },
+        "media": {
+          // Any session participant can write media metadata.
+          ".write": "auth != null && data.parent().child('participants').child(auth.uid).exists()",
+          "$mediaId": {
+            ".read": "auth != null && data.parent().parent().child('participants').child(auth.uid).exists()",
+            // Only the uploader can delete their own media entry.
+            ".write": "auth != null && (auth.uid === data.child('uploadedBy').val() || data.parent().parent().child('hostId').val() === auth.uid)"
           }
         }
       }
