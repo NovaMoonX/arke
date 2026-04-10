@@ -10,6 +10,7 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.auth.uid == userId
                     && request.resource.data.uid == userId;
+      // Profiles cannot be deleted to maintain data integrity
       allow delete: if false;
     }
 

@@ -104,7 +104,7 @@ export function TextPortal({ className }: TextPortalProps) {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Prefer authenticated user's displayName when sending messages
+  // Use authenticated user's displayName if available, otherwise fall back to device name
   const senderName = profile?.displayName || deviceName;
 
   const sessionPin = session?.pin;
