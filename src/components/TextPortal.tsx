@@ -141,23 +141,30 @@ export function TextPortal({ className }: TextPortalProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-open media for new messages (images and videos only)
+  // Auto-open new incoming messages that have a URL to open
   useEffect(() => {
     if (!autoOpen || messages.length === 0) return;
 
     const latestMsg = messages[messages.length - 1];
-    if (
-      latestMsg.mediaIds &&
-      latestMsg.downloadURLs &&
-      latestMsg.deviceId !== deviceId &&
-      (latestMsg.contentType === 'image' || latestMsg.contentType === 'video')
-    ) {
-      // Only auto-open if the message is recent (within 5 seconds)
-      const isRecent = Date.now() - latestMsg.sentAt < 5000;
-      if (isRecent) {
-        for (const url of latestMsg.downloadURLs) {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
+    // Skip own messages
+    if (latestMsg.deviceId === deviceId) return;
+
+    const hasURLs = latestMsg.downloadURLs && latestMsg.downloadURLs.length > 0;
+    const isOpenable =
+      latestMsg.contentType === 'link' ||
+      latestMsg.contentType === 'image' ||
+      latestMsg.contentType === 'video' ||
+      latestMsg.contentType === 'file' ||
+      latestMsg.contentType === 'mixed' ||
+      (latestMsg.mediaIds != null && hasURLs);
+
+    if (!isOpenable || !hasURLs) return;
+
+    // Only auto-open if the message is recent (within 5 seconds)
+    const isRecent = Date.now() - latestMsg.sentAt < 5000;
+    if (isRecent) {
+      for (const url of latestMsg.downloadURLs!) {
+        window.open(url, '_blank', 'noopener,noreferrer');
       }
     }
   }, [messages, autoOpen, deviceId]);
@@ -420,7 +427,7 @@ export function TextPortal({ className }: TextPortalProps) {
                       />
                     </div>
                   ) : msg.mediaIds ? (
-                    <div className='flex-1 text-sm'>
+                    <div className='min-w-0 flex-1 text-sm'>
                       {msg.mediaIds.length === 1 ? (
                         <a
                           href={msg.downloadURLs?.[0] ?? '#'}
@@ -429,7 +436,10 @@ export function TextPortal({ className }: TextPortalProps) {
                           className='text-primary underline-offset-2 hover:underline'
                           aria-label={`Open shared file: ${msg.fileNames?.[0] ?? 'media'}`}
                         >
-                          {getContentTypeIcon(msg.contentType)} {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
+                          {getContentTypeIcon(msg.contentType)} {msg.text}{' '}
+                          {msg.fileNames?.[0] && (
+                            <span className='break-all'>({msg.fileNames[0]})</span>
+                          )}
                         </a>
                       ) : (
                         <>
@@ -446,7 +456,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           {msg.fileNames && msg.fileNames.length > 0 && (
                             <ul className='text-foreground/50 mt-1 list-inside list-disc text-xs'>
                               {msg.fileNames.map((name, i) => (
-                                <li key={i}>
+                                <li key={i} className='break-all'>
                                   <a
                                     href={msg.downloadURLs?.[i] ?? '#'}
                                     target='_blank'

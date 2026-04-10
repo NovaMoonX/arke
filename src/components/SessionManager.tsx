@@ -170,8 +170,8 @@ export function SessionManager({ className }: SessionManagerProps) {
             )}
           </div>
 
-          {/* Other participants row (shown after joining, not as host) */}
-          {!isHost && otherParticipants.length > 0 && (
+          {/* Other participants row — visible for both host and guests */}
+          {otherParticipants.length > 0 && (
             <div className='flex flex-wrap gap-x-2 gap-y-1 pt-0.5'>
               <span className='text-xs text-foreground/30'>Also here:</span>
               {otherParticipants.map((p) => (
