@@ -5,6 +5,9 @@ import { NetworkBanner } from '@components/NetworkBanner';
 import { APP_TITLE, APP_ICON_PATH } from '@lib/app';
 import { useAuthContext } from '@hooks/useAuthContext';
 
+const MENU_ITEM_CLASS =
+	'block w-full rounded-md px-2 py-1 text-left text-xs text-foreground/70 hover:bg-foreground/5';
+
 function UserMenu() {
 	const { user, profile, signInWithGoogle, signOutUser, loading } =
 		useAuthContext();
@@ -61,13 +64,13 @@ function UserMenu() {
 				<div className='space-y-1 pt-1'>
 					<button
 						onClick={() => navigate('/cache')}
-						className='block w-full rounded-md px-2 py-1 text-left text-xs text-foreground/70 hover:bg-foreground/5'
+						className={MENU_ITEM_CLASS}
 					>
 						My Caches
 					</button>
 					<button
 						onClick={signOutUser}
-						className='block w-full rounded-md px-2 py-1 text-left text-xs text-foreground/70 hover:bg-foreground/5'
+						className={MENU_ITEM_CLASS}
 					>
 						Sign Out
 					</button>

@@ -37,7 +37,7 @@ export function MyCaches() {
   const { confirm } = useActionModal();
   const [caches, setCaches] = useState<Cache[]>([]);
   const [loading, setLoading] = useState(() => !!profile);
-  const [fetchedAt, setFetchedAt] = useState(Date.now);
+  const [fetchedAt, setFetchedAt] = useState(() => Date.now());
 
   useEffect(() => {
     if (!profile) return;
@@ -47,7 +47,7 @@ export function MyCaches() {
     getUserCaches(profile.uid).then((data) => {
       if (cancelled) return;
       setCaches(data);
-      setFetchedAt(Date.now);
+      setFetchedAt(Date.now());
       setLoading(false);
     });
 
