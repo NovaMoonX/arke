@@ -155,15 +155,14 @@ export function TextPortal({ className }: TextPortalProps) {
       latestMsg.contentType === 'image' ||
       latestMsg.contentType === 'video' ||
       latestMsg.contentType === 'file' ||
-      latestMsg.contentType === 'mixed' ||
-      (latestMsg.mediaIds != null && hasURLs);
+      latestMsg.contentType === 'mixed';
 
     if (!isOpenable || !hasURLs) return;
 
     // Only auto-open if the message is recent (within 5 seconds)
     const isRecent = Date.now() - latestMsg.sentAt < 5000;
     if (isRecent) {
-      for (const url of latestMsg.downloadURLs!) {
+      for (const url of latestMsg.downloadURLs ?? []) {
         window.open(url, '_blank', 'noopener,noreferrer');
       }
     }
