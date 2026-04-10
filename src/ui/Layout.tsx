@@ -8,7 +8,6 @@ function Layout() {
 		<div className='flex h-dvh w-dvw flex-col transition-colors duration-200'>
 			<NetworkBanner />
 			<div className='page relative flex-1 overflow-auto'>
-				<ThemeToggle />
 				{/* App branding — top right */}
 				<div className='absolute top-4 right-4 z-50 flex items-center gap-2'>
 					<span className='text-sm font-bold text-foreground/80'>{APP_TITLE}</span>
@@ -18,6 +17,7 @@ function Layout() {
 					<Outlet />
 				</main>
 			</div>
+			<ThemeToggle />
 		</div>
 	);
 }

@@ -4,6 +4,7 @@ import {
   Input,
   Modal,
   Callout,
+  Popover,
 } from '@moondreamsdev/dreamer-ui/components';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
@@ -27,6 +28,9 @@ export function SessionManager({ className }: SessionManagerProps) {
     loading,
     authenticating,
     error,
+    deviceName,
+    deviceColor,
+    deviceId,
   } = useSessionContext();
 
   const { confirm } = useActionModal();
@@ -67,62 +71,120 @@ export function SessionManager({ className }: SessionManagerProps) {
 
   // Active session — compact inline bar
   if (session) {
+    const otherParticipants = participants.filter((p) => p.deviceId !== deviceId);
+
     return (
       <div className={join('space-y-2', className)} role='region' aria-label='Active session'>
-        <div className='flex items-center gap-2 rounded-lg border border-foreground/10 px-3 py-2'>
-          {/* Status indicator */}
-          <span
-            className='h-2 w-2 shrink-0 rounded-full bg-green-500'
-            aria-hidden='true'
-          />
+        <div className='space-y-1.5 rounded-lg border border-foreground/10 px-3 py-2'>
+          {/* Main row */}
+          <div className='flex items-center gap-2'>
+            {/* Status indicator */}
+            <span
+              className='h-2 w-2 shrink-0 rounded-full bg-green-500'
+              aria-hidden='true'
+            />
 
-          {/* Host badge */}
-          {isHost && (
-            <span className='rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary'>
-              Host
+            {/* Host badge */}
+            {isHost && (
+              <span className='rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary'>
+                Host
+              </span>
+            )}
+
+            {/* Own device identity */}
+            <span
+              className='inline-block h-2 w-2 shrink-0 rounded-full'
+              style={{ backgroundColor: deviceColor }}
+              aria-hidden='true'
+            />
+            <span className='text-xs font-medium' style={{ color: deviceColor }}>
+              {deviceName}
             </span>
-          )}
 
-          {/* Device count */}
-          <span className='text-xs text-foreground/60'>
-            {participants.length} {participants.length === 1 ? 'device' : 'devices'}
-          </span>
+            {/* Device count — clickable to show participants */}
+            <Popover
+              trigger={
+                <button className='text-xs text-foreground/40 underline-offset-2 hover:underline'>
+                  · {participants.length} {participants.length === 1 ? 'device' : 'devices'}
+                </button>
+              }
+              placement='bottom'
+              alignment='start'
+              className='max-w-60'
+            >
+              <div className='space-y-1.5 p-3'>
+                <p className='text-xs font-semibold text-foreground/80'>Connected Devices</p>
+                {participants.map((p) => (
+                  <div key={p.id} className='flex items-center gap-1.5'>
+                    <span
+                      className='inline-block h-2 w-2 shrink-0 rounded-full'
+                      style={{ backgroundColor: p.color || '#888' }}
+                      aria-hidden='true'
+                    />
+                    <span className='text-xs text-foreground/70'>
+                      {p.name || 'Unknown'}
+                      {p.deviceId === deviceId && (
+                        <span className='text-foreground/40'> (you)</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Popover>
 
-          {/* Spacer */}
-          <span className='flex-1' />
+            {/* Spacer */}
+            <span className='flex-1' />
 
-          {/* Actions: QR + Leave/End */}
-          {isHost && (
-            <Button
-              size='sm'
-              variant='tertiary'
-              onClick={() => setShowQR(true)}
-              className='text-xs'
-              aria-label='Show QR code'
-            >
-              <QRCodeIcon className='h-4 w-4' />
-            </Button>
-          )}
-          {isHost ? (
-            <Button
-              size='sm'
-              variant='destructive'
-              onClick={handleEndSession}
-              className='text-xs'
-              aria-label='End session for all'
-            >
-              End Session
-            </Button>
-          ) : (
-            <Button
-              size='sm'
-              variant='destructive'
-              onClick={handleLeaveSession}
-              className='text-xs'
-              aria-label='Leave session'
-            >
-              Leave
-            </Button>
+            {/* Actions: QR + Leave/End */}
+            {isHost && (
+              <Button
+                size='sm'
+                variant='tertiary'
+                onClick={() => setShowQR(true)}
+                className='text-xs'
+                aria-label='Show QR code'
+              >
+                <QRCodeIcon className='h-4 w-4' />
+              </Button>
+            )}
+            {isHost ? (
+              <Button
+                size='sm'
+                variant='destructive'
+                onClick={handleEndSession}
+                className='text-xs'
+                aria-label='End session for all'
+              >
+                End Session
+              </Button>
+            ) : (
+              <Button
+                size='sm'
+                variant='destructive'
+                onClick={handleLeaveSession}
+                className='text-xs'
+                aria-label='Leave session'
+              >
+                Leave
+              </Button>
+            )}
+          </div>
+
+          {/* Other participants row — visible for both host and guests */}
+          {otherParticipants.length > 0 && (
+            <div className='flex flex-wrap gap-x-2 gap-y-1 pt-0.5'>
+              <span className='text-xs text-foreground/30'>Also here:</span>
+              {otherParticipants.map((p) => (
+                <span key={p.id} className='flex items-center gap-1 text-xs'>
+                  <span
+                    className='inline-block h-1.5 w-1.5 rounded-full'
+                    style={{ backgroundColor: p.color || '#888' }}
+                    aria-hidden='true'
+                  />
+                  <span style={{ color: p.color || undefined }}>{p.name || 'Unknown'}</span>
+                </span>
+              ))}
+            </div>
           )}
         </div>
 

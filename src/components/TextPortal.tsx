@@ -49,15 +49,22 @@ interface TextPortalProps {
   className?: string;
 }
 
-const MEDIA_ACCEPTED_TYPES = 'image/*,video/mp4,video/webm,video/quicktime';
-const FILE_ACCEPTED_TYPES = 'application/pdf,application/zip,application/x-zip-compressed,text/plain,text/csv';
+const MEDIA_ACCEPTED_TYPES = 'image/*,video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,audio/*';
+const FILE_ACCEPTED_TYPES = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,application/x-zip-compressed,application/gzip,application/x-tar,application/x-7z-compressed,application/x-rar-compressed,text/plain,text/csv,text/html,text/markdown,application/json,application/xml';
 
-const AUTO_DOWNLOAD_KEY = 'arke_auto_download';
+const AUTO_OPEN_KEY = 'arke_auto_open';
 
-function getAutoDownloadDefault(): boolean {
+function getAutoOpenDefault(): boolean {
   try {
-    const stored = localStorage.getItem(AUTO_DOWNLOAD_KEY);
+    const stored = localStorage.getItem(AUTO_OPEN_KEY);
     if (stored !== null) return stored === 'true';
+    // Migrate from old key
+    const old = localStorage.getItem('arke_auto_download');
+    if (old !== null) {
+      localStorage.removeItem('arke_auto_download');
+      localStorage.setItem(AUTO_OPEN_KEY, old);
+      return old === 'true';
+    }
   } catch {
     // ignore
   }
@@ -90,21 +97,21 @@ export function TextPortal({ className }: TextPortalProps) {
   const [sending, setSending] = useState(false);
   const [uploadIndex, setUploadIndex] = useState({ current: 0, total: 0 });
   const [inputMode, setInputMode] = useState<InputMode>('text');
-  const [autoDownload, setAutoDownload] = useState(getAutoDownloadDefault);
+  const [autoOpen, setAutoOpen] = useState(getAutoOpenDefault);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sessionPin = session?.pin;
 
-  // Persist auto-download preference
+  // Persist auto-open preference
   useEffect(() => {
     try {
-      localStorage.setItem(AUTO_DOWNLOAD_KEY, String(autoDownload));
+      localStorage.setItem(AUTO_OPEN_KEY, String(autoOpen));
     } catch {
       // ignore
     }
-  }, [autoDownload]);
+  }, [autoOpen]);
 
   // Subscribe to messages from RTDB
   useEffect(() => {
@@ -134,31 +141,32 @@ export function TextPortal({ className }: TextPortalProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-download media for new messages (images and videos only)
+  // Auto-open new incoming messages that have a URL to open
   useEffect(() => {
-    if (!autoDownload || messages.length === 0) return;
+    if (!autoOpen || messages.length === 0) return;
 
     const latestMsg = messages[messages.length - 1];
-    if (
-      latestMsg.mediaIds &&
-      latestMsg.downloadURLs &&
-      latestMsg.deviceId !== deviceId &&
-      (latestMsg.contentType === 'image' || latestMsg.contentType === 'video')
-    ) {
-      // Only auto-download if the message is recent (within 5 seconds)
-      const isRecent = Date.now() - latestMsg.sentAt < 5000;
-      if (isRecent) {
-        for (const url of latestMsg.downloadURLs) {
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = '';
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.click();
-        }
+    // Skip own messages
+    if (latestMsg.deviceId === deviceId) return;
+
+    const hasURLs = latestMsg.downloadURLs && latestMsg.downloadURLs.length > 0;
+    const isOpenable =
+      latestMsg.contentType === 'link' ||
+      latestMsg.contentType === 'image' ||
+      latestMsg.contentType === 'video' ||
+      latestMsg.contentType === 'file' ||
+      latestMsg.contentType === 'mixed';
+
+    if (!isOpenable || !hasURLs) return;
+
+    // Only auto-open if the message is recent (within 5 seconds)
+    const isRecent = Date.now() - latestMsg.sentAt < 5000;
+    if (isRecent) {
+      for (const url of latestMsg.downloadURLs ?? []) {
+        window.open(url, '_blank', 'noopener,noreferrer');
       }
     }
-  }, [messages, autoDownload, deviceId]);
+  }, [messages, autoOpen, deviceId]);
 
   const handleSendText = useCallback(async () => {
     const text = draft.trim();
@@ -260,8 +268,8 @@ export function TextPortal({ className }: TextPortalProps) {
       // Quick client-side size check
       const validFiles: File[] = [];
       for (const file of selectedFiles) {
-        const isVideo = file.type.startsWith('video/');
-        const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+        const isLargeMedia = file.type.startsWith('video/') || file.type.startsWith('audio/');
+        const maxSize = isLargeMedia ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
         const limitMB = maxSize / (1024 * 1024);
         if (file.size > maxSize) {
           addToast({
@@ -303,8 +311,11 @@ export function TextPortal({ className }: TextPortalProps) {
       const videoCount = pairs.filter((p) =>
         p.file.type.startsWith('video/'),
       ).length;
+      const audioCount = pairs.filter((p) =>
+        p.file.type.startsWith('audio/'),
+      ).length;
       const fileCount = pairs.filter(
-        (p) => !p.file.type.startsWith('image/') && !p.file.type.startsWith('video/'),
+        (p) => !p.file.type.startsWith('image/') && !p.file.type.startsWith('video/') && !p.file.type.startsWith('audio/'),
       ).length;
 
       const parts: string[] = [];
@@ -314,6 +325,9 @@ export function TextPortal({ className }: TextPortalProps) {
       if (videoCount > 0) {
         parts.push(`${videoCount} ${videoCount === 1 ? 'video' : 'videos'}`);
       }
+      if (audioCount > 0) {
+        parts.push(`${audioCount} ${audioCount === 1 ? 'audio file' : 'audio files'}`);
+      }
       if (fileCount > 0) {
         parts.push(`${fileCount} ${fileCount === 1 ? 'file' : 'files'}`);
       }
@@ -322,9 +336,11 @@ export function TextPortal({ className }: TextPortalProps) {
       // Determine content type for the icon
       let contentType: FeedMessage['contentType'] = 'file';
       if (mode === 'media') {
-        if (imageCount > 0 && videoCount === 0) contentType = 'image';
-        else if (videoCount > 0 && imageCount === 0) contentType = 'video';
-        else if (imageCount > 0 && videoCount > 0) contentType = 'mixed';
+        const mediaTypeCount = (imageCount > 0 ? 1 : 0) + (videoCount > 0 ? 1 : 0) + (audioCount > 0 ? 1 : 0);
+        if (mediaTypeCount > 1) contentType = 'mixed';
+        else if (imageCount > 0) contentType = 'image';
+        else if (videoCount > 0) contentType = 'video';
+        else if (audioCount > 0) contentType = 'mixed';
       }
 
       // Post a feed message
@@ -410,7 +426,7 @@ export function TextPortal({ className }: TextPortalProps) {
                       />
                     </div>
                   ) : msg.mediaIds ? (
-                    <div className='flex-1 text-sm'>
+                    <div className='min-w-0 flex-1 text-sm'>
                       {msg.mediaIds.length === 1 ? (
                         <a
                           href={msg.downloadURLs?.[0] ?? '#'}
@@ -419,7 +435,10 @@ export function TextPortal({ className }: TextPortalProps) {
                           className='text-primary underline-offset-2 hover:underline'
                           aria-label={`Open shared file: ${msg.fileNames?.[0] ?? 'media'}`}
                         >
-                          {getContentTypeIcon(msg.contentType)} {msg.text} {msg.fileNames?.[0] ? `(${msg.fileNames?.[0]})` : ''}
+                          {getContentTypeIcon(msg.contentType)} {msg.text}{' '}
+                          {msg.fileNames?.[0] && (
+                            <span className='break-all'>({msg.fileNames[0]})</span>
+                          )}
                         </a>
                       ) : (
                         <>
@@ -436,7 +455,7 @@ export function TextPortal({ className }: TextPortalProps) {
                           {msg.fileNames && msg.fileNames.length > 0 && (
                             <ul className='text-foreground/50 mt-1 list-inside list-disc text-xs'>
                               {msg.fileNames.map((name, i) => (
-                                <li key={i}>
+                                <li key={i} className='break-all'>
                                   <a
                                     href={msg.downloadURLs?.[i] ?? '#'}
                                     target='_blank'
@@ -510,12 +529,12 @@ export function TextPortal({ className }: TextPortalProps) {
             </span>
           </div>
           <div className='flex items-center gap-1.5'>
-            <span className='text-foreground/50 text-xs'>Auto-download</span>
+            <span className='text-foreground/50 text-xs'>Auto-open</span>
             <Toggle
-              checked={autoDownload}
-              onCheckedChange={setAutoDownload}
+              checked={autoOpen}
+              onCheckedChange={setAutoOpen}
               size='sm'
-              aria-label='Toggle auto-download of shared items'
+              aria-label='Toggle auto-open of shared items'
             />
           </div>
         </div>
@@ -601,10 +620,10 @@ export function TextPortal({ className }: TextPortalProps) {
               aria-label='Select images or videos to share'
             >
               <ImageIcon className='mr-1.5 h-4 w-4' />
-              Select Images or Videos
+              Select Images, Videos, or Audio
             </Button>
             <p className='text-foreground/40 text-center text-xs'>
-              Images up to 10MB · Videos up to 50MB
+              Images up to 10MB · Videos up to 50MB · Audio up to 50MB
             </p>
             <input
               ref={mediaInputRef}
@@ -632,7 +651,7 @@ export function TextPortal({ className }: TextPortalProps) {
               Select Files
             </Button>
             <p className='text-foreground/40 text-center text-xs'>
-              PDFs and documents up to 10MB
+              Documents and archives up to 10MB
             </p>
             <input
               ref={fileInputRef}

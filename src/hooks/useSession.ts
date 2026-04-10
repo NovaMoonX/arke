@@ -53,6 +53,7 @@ export function useSession(): UseSessionReturn {
 
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
   const participantsUnsubRef = useRef<Unsubscribe | null>(null);
+  const presenceUnsubRef = useRef<Unsubscribe | null>(null);
   const sessionPinRef = useRef<string | null>(null);
 
   // Authenticate anonymously
@@ -62,18 +63,23 @@ export function useSession(): UseSessionReturn {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const firebaseAuth = auth;
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         setUserId(user.uid);
       }
       setAuthenticating(false);
     });
 
-    signInAnonymously(auth).catch(() => {
-      // Auth state change listener will handle the final state.
-      // Don't surface auth errors here — they are expected while
-      // authentication is still bootstrapping (e.g. on a /join/:pin route).
-      setAuthenticating(false);
+    signInAnonymously(firebaseAuth).catch(() => {
+      // If initial sign-in fails, retry once after a short delay.
+      // This handles race conditions on fresh page loads (e.g. /join/:pin).
+      setTimeout(() => {
+        signInAnonymously(firebaseAuth).catch(() => {
+          setAuthenticating(false);
+        });
+      }, 1000);
     });
 
     return () => unsubscribe();
@@ -88,8 +94,51 @@ export function useSession(): UseSessionReturn {
       participantsUnsubRef.current();
       participantsUnsubRef.current = null;
     }
+    if (presenceUnsubRef.current) {
+      presenceUnsubRef.current();
+      presenceUnsubRef.current = null;
+    }
     sessionPinRef.current = null;
   }, []);
+
+  /**
+   * Set up Firebase presence system for the current user in a session.
+   * When the connection is restored after a disconnect, re-adds the
+   * participant entry and re-establishes the onDisconnect handler.
+   * This prevents the "0 devices" bug.
+   */
+  const setupPresence = useCallback(
+    (pin: string, uid: string, deviceIdentity: { name: string; color: string }) => {
+      if (!database) return;
+
+      // Clean up previous presence listener
+      if (presenceUnsubRef.current) {
+        presenceUnsubRef.current();
+        presenceUnsubRef.current = null;
+      }
+
+      const connectedRef = ref(database, '.info/connected');
+      const participantRef = ref(database, `sessions/${pin}/participants/${uid}`);
+
+      presenceUnsubRef.current = onValue(connectedRef, (snap) => {
+        if (snap.val() !== true) return;
+
+        // Re-add participant on reconnect
+        const participantData = {
+          deviceId: uid,
+          joinedAt: Date.now(),
+          name: deviceIdentity.name,
+          color: deviceIdentity.color,
+        };
+
+        // First set onDisconnect, then write presence
+        onDisconnect(participantRef).remove().then(() => {
+          set(participantRef, participantData).catch(() => {});
+        }).catch(() => {});
+      });
+    },
+    [],
+  );
 
   const subscribeToSession = useCallback(
     (pin: string) => {
@@ -203,12 +252,8 @@ export function useSession(): UseSessionReturn {
 
       await set(sessionRef, sessionData);
 
-      // Set up onDisconnect to remove this participant
-      const participantRef = ref(
-        database,
-        `sessions/${pin}/participants/${userId}`,
-      );
-      await onDisconnect(participantRef).remove();
+      // Set up presence monitoring (handles onDisconnect + reconnect)
+      setupPresence(pin, userId, identity);
 
       setIsHost(true);
       subscribeToSession(pin);
@@ -218,7 +263,7 @@ export function useSession(): UseSessionReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, identity, subscribeToSession, authenticating]);
+  }, [userId, identity, subscribeToSession, authenticating, setupPresence]);
 
   const joinSession = useCallback(
     async (pin: string) => {
@@ -267,8 +312,8 @@ export function useSession(): UseSessionReturn {
           color: identity.color,
         });
 
-        // Set up onDisconnect to remove this participant
-        await onDisconnect(participantRef).remove();
+        // Set up presence monitoring (handles onDisconnect + reconnect)
+        setupPresence(pin, userId, identity);
 
         setIsHost(false);
         subscribeToSession(pin);
@@ -279,7 +324,7 @@ export function useSession(): UseSessionReturn {
         setLoading(false);
       }
     },
-    [userId, identity, subscribeToSession, authenticating],
+    [userId, identity, subscribeToSession, authenticating, setupPresence],
   );
 
   const leaveSession = useCallback(async () => {

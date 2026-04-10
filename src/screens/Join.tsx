@@ -1,13 +1,23 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@moondreamsdev/dreamer-ui/components';
+import { Button, Callout } from '@moondreamsdev/dreamer-ui/components';
 import { useSessionContext } from '@hooks/useSessionContext';
 
 function Join() {
   const { pin } = useParams<{ pin: string }>();
   const navigate = useNavigate();
-  const { session, joinSession, loading, authenticating, error } = useSessionContext();
+  const {
+    session,
+    joinSession,
+    loading,
+    authenticating,
+    error,
+    deviceName,
+    deviceColor,
+    participants,
+  } = useSessionContext();
   const hasAttemptedJoin = useRef(false);
+  const prevAuthenticating = useRef(true);
 
   const attemptJoin = useCallback(() => {
     if (pin && !session && !loading && !authenticating && !hasAttemptedJoin.current) {
@@ -15,6 +25,19 @@ function Join() {
       joinSession(pin);
     }
   }, [pin, session, loading, authenticating, joinSession]);
+
+  // Reset the join guard when auth transitions from true → false
+  // so that if the first attempt failed due to auth, we can retry
+  useEffect(() => {
+    if (prevAuthenticating.current && !authenticating) {
+      prevAuthenticating.current = false;
+      if (!hasAttemptedJoin.current) return;
+      // Auth just finished — if there's an auth error, allow retry
+      if (error && error.includes('Not authenticated')) {
+        hasAttemptedJoin.current = false;
+      }
+    }
+  }, [authenticating, error]);
 
   useEffect(() => {
     attemptJoin();
@@ -47,14 +70,54 @@ function Join() {
 
         {error && !authenticating && !loading && (
           <div className='space-y-4' role='alert'>
-            <p className='text-lg font-medium text-destructive'>{error}</p>
-            <Button
-              onClick={() => navigate('/', { replace: true })}
-              variant='secondary'
-              aria-label='Go to home page'
-            >
-              Go to Home
-            </Button>
+            <Callout variant='destructive' icon={null} description={error} />
+            <div className='flex justify-center gap-3'>
+              <Button
+                onClick={() => {
+                  hasAttemptedJoin.current = false;
+                  attemptJoin();
+                }}
+                variant='primary'
+                aria-label='Try joining again'
+              >
+                Retry
+              </Button>
+              <Button
+                onClick={() => navigate('/', { replace: true })}
+                variant='secondary'
+                aria-label='Go to home page'
+              >
+                Go to Home
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Show user info + participants after successful join while navigating */}
+        {session && (
+          <div className='space-y-3'>
+            <p className='text-sm text-foreground/60'>
+              Joined as{' '}
+              <span className='font-semibold' style={{ color: deviceColor }}>
+                {deviceName}
+              </span>
+            </p>
+            {participants.length > 0 && (
+              <div aria-label='Session participants' role='group'>
+                <p className='text-xs text-foreground/40'>
+                  <span aria-label={`${participants.length} ${participants.length === 1 ? 'device' : 'devices'} in session`}>
+                    {participants.length} {participants.length === 1 ? 'device' : 'devices'} in session:
+                  </span>
+                </p>
+                <ul className='mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1' aria-label='Connected device names'>
+                  {participants.map((p) => (
+                    <li key={p.id} className='text-xs text-foreground/50'>
+                      {p.name || 'Unknown'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
