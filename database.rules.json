@@ -16,19 +16,22 @@
           }
         },
         "messages": {
-          // Any session participant can write messages.
-          ".write": "auth != null && data.parent().child('participants').child(auth.uid).exists()",
           "$messageId": {
-            ".read": "auth != null && data.parent().parent().child('participants').child(auth.uid).exists()"
+            // Any session participant can read and write messages.
+            ".read": "auth != null && root.child('sessions').child($sessionId).child('participants').child(auth.uid).exists()",
+            ".write": "auth != null && root.child('sessions').child($sessionId).child('participants').child(auth.uid).exists()"
           }
         },
         "media": {
-          // Any session participant can write media metadata.
-          ".write": "auth != null && data.parent().child('participants').child(auth.uid).exists()",
           "$mediaId": {
-            ".read": "auth != null && data.parent().parent().child('participants').child(auth.uid).exists()",
-            // Only the uploader can delete their own media entry.
-            ".write": "auth != null && (auth.uid === data.child('uploadedBy').val() || data.parent().parent().child('hostId').val() === auth.uid)"
+            // Any session participant can read media metadata.
+            ".read": "auth != null && root.child('sessions').child($sessionId).child('participants').child(auth.uid).exists()",
+            // Participants can create new media entries; only the uploader or host can update/delete.
+            ".write": "auth != null && (
+              !data.exists() && root.child('sessions').child($sessionId).child('participants').child(auth.uid).exists()
+              || data.child('uploadedBy').val() === auth.uid
+              || root.child('sessions').child($sessionId).child('hostId').val() === auth.uid
+            )"
           }
         }
       }
