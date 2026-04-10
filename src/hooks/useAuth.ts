@@ -1,16 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  onAuthStateChanged,
-  type User,
-} from 'firebase/auth';
-import { auth } from '@lib/firebase';
-import { getUserProfile, createUserProfile } from '@lib/firebase/users';
+import { useContext, createContext } from 'react';
+import type { User } from 'firebase/auth';
 import type { UserProfile } from '@lib/types';
 
-export interface UseAuthReturn {
+export interface AuthContextValue {
   /** The Firebase Auth user (null when signed out) */
   user: User | null;
   /** The Firestore user profile (null when no profile exists yet) */
@@ -29,135 +21,14 @@ export interface UseAuthReturn {
   error: string | null;
 }
 
-export function useAuth(): UseAuthReturn {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  // If auth is not available, skip loading entirely
-  const [loading, setLoading] = useState(() => !!auth);
-  const [needsProfile, setNeedsProfile] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
-  // Listen for auth state changes
-  useEffect(() => {
-    if (!auth) return;
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && !firebaseUser.isAnonymous) {
-        setUser(firebaseUser);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
 
-        // Check if user profile exists
-        const existingProfile = await getUserProfile(firebaseUser.uid);
-        if (existingProfile) {
-          setProfile(existingProfile);
-          setNeedsProfile(false);
-        } else {
-          setNeedsProfile(true);
-        }
-      } else {
-        setUser(null);
-        setProfile(null);
-        setNeedsProfile(false);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const signInWithGoogle = useCallback(async () => {
-    if (!auth) {
-      setError('Authentication is not available.');
-      return;
-    }
-
-    setError(null);
-
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-
-      // Check for existing profile
-      const existingProfile = await getUserProfile(firebaseUser.uid);
-      if (existingProfile) {
-        setProfile(existingProfile);
-        setNeedsProfile(false);
-      } else {
-        setNeedsProfile(true);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign-in failed.';
-      // Don't show error for user-cancelled popup
-      if (message.includes('popup-closed-by-user')) return;
-      setError(message);
-    }
-  }, []);
-
-  const signOutUser = useCallback(async () => {
-    if (!auth) return;
-
-    try {
-      await signOut(auth);
-      setUser(null);
-      setProfile(null);
-      setNeedsProfile(false);
-      setError(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign-out failed.';
-      setError(message);
-    }
-  }, []);
-
-  const completeProfile = useCallback(
-    async (displayName: string) => {
-      if (!user) return;
-
-      setError(null);
-
-      try {
-        const newProfile: UserProfile = {
-          uid: user.uid,
-          displayName: displayName.trim(),
-          email: user.email || '',
-          photoURL: user.photoURL || null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-
-        await createUserProfile(newProfile);
-        setProfile(newProfile);
-        setNeedsProfile(false);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to create profile.';
-        setError(message);
-      }
-    },
-    [user],
-  );
-
-  const result: UseAuthReturn = useMemo(
-    () => ({
-      user,
-      profile,
-      loading,
-      needsProfile,
-      signInWithGoogle,
-      signOutUser,
-      completeProfile,
-      error,
-    }),
-    [
-      user,
-      profile,
-      loading,
-      needsProfile,
-      signInWithGoogle,
-      signOutUser,
-      completeProfile,
-      error,
-    ],
-  );
-
-  return result;
+  return context;
 }

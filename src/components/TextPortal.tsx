@@ -24,6 +24,7 @@ import { FileIcon } from '@components/icons/FileIcon';
 import { ref, push, onValue, type Unsubscribe } from 'firebase/database';
 import { database } from '@lib/firebase';
 import { useSessionContext } from '@hooks/useSessionContext';
+import { useAuth } from '@hooks/useAuth';
 import { useMediaUpload, type MediaUploadResult } from '@hooks/useMediaUpload';
 import { MAX_FILE_SIZE, MAX_VIDEO_SIZE, saveLinkMetadata } from '@lib/firebase/storage';
 import { auth } from '@lib/firebase';
@@ -88,6 +89,7 @@ function getContentTypeIcon(contentType?: string) {
 
 export function TextPortal({ className }: TextPortalProps) {
   const { session, deviceId, deviceName, deviceColor } = useSessionContext();
+  const { profile } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const { uploadMedia, uploading, progress } = useMediaUpload();
@@ -101,6 +103,9 @@ export function TextPortal({ className }: TextPortalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Prefer authenticated user's displayName when sending messages
+  const senderName = profile?.displayName || deviceName;
 
   const sessionPin = session?.pin;
 
@@ -178,7 +183,7 @@ export function TextPortal({ className }: TextPortalProps) {
       await push(messagesRef, {
         text,
         deviceId,
-        deviceName,
+        deviceName: senderName,
         color: deviceColor,
         sentAt: Date.now(),
         contentType: 'text',
@@ -189,7 +194,7 @@ export function TextPortal({ className }: TextPortalProps) {
     } finally {
       setSending(false);
     }
-  }, [draft, sessionPin, deviceId, deviceName, deviceColor, addToast]);
+  }, [draft, sessionPin, deviceId, senderName, deviceColor, addToast]);
 
   const handleSendLink = useCallback(async () => {
     const url = linkDraft.trim();
@@ -220,7 +225,7 @@ export function TextPortal({ className }: TextPortalProps) {
       await push(messagesRef, {
         text: `Shared a link`,
         deviceId,
-        deviceName,
+        deviceName: senderName,
         color: deviceColor,
         sentAt: Date.now(),
         contentType: 'link',
@@ -234,7 +239,7 @@ export function TextPortal({ className }: TextPortalProps) {
     } finally {
       setSending(false);
     }
-  }, [linkDraft, sessionPin, deviceId, deviceName, deviceColor, addToast]);
+  }, [linkDraft, sessionPin, deviceId, senderName, deviceColor, addToast]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -349,7 +354,7 @@ export function TextPortal({ className }: TextPortalProps) {
         await push(messagesRef, {
           text: summaryText,
           deviceId,
-          deviceName,
+          deviceName: senderName,
           color: deviceColor,
           sentAt: Date.now(),
           mediaIds,
@@ -361,7 +366,7 @@ export function TextPortal({ className }: TextPortalProps) {
         addToast({ title: 'Failed to post media message', type: 'error' });
       }
     },
-    [sessionPin, deviceId, deviceName, deviceColor, addToast, uploadMedia],
+    [sessionPin, deviceId, senderName, deviceColor, addToast, uploadMedia],
   );
 
   if (!session) return null;
@@ -525,7 +530,7 @@ export function TextPortal({ className }: TextPortalProps) {
               aria-hidden='true'
             />
             <span className='text-xs font-medium' style={{ color: deviceColor }}>
-              {deviceName}
+              {senderName}
             </span>
           </div>
           <div className='flex items-center gap-1.5'>

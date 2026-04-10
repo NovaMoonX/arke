@@ -1,12 +1,12 @@
 import { Button, Callout } from '@moondreamsdev/dreamer-ui/components';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 
 /**
  * Promotion banner encouraging anonymous users to sign in
  * so they can use the Cache feature.
  */
 export function CachePromotion() {
-  const { signInWithGoogle, loading, error } = useAuthContext();
+  const { signInWithGoogle, loading, error } = useAuth();
 
   return (
     <div className='mx-auto w-full max-w-md space-y-4 rounded-xl border border-foreground/10 p-5'>

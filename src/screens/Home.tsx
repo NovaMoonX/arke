@@ -5,13 +5,13 @@ import { MediaSummary } from '@components/MediaSummary';
 import { OnboardingFlow } from '@components/OnboardingFlow';
 import { CachePromotion } from '@components/CachePromotion';
 import { useSessionContext } from '@hooks/useSessionContext';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 import { CopyButton, Button } from '@moondreamsdev/dreamer-ui/components';
 import { useNavigate } from 'react-router-dom';
 
 function Home() {
 	const { session } = useSessionContext();
-	const { user, profile } = useAuthContext();
+	const { user, profile } = useAuth();
 	const navigate = useNavigate();
 
 	const isSignedIn = !!user && !user.isAnonymous && !!profile;

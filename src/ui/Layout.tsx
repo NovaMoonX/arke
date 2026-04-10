@@ -3,14 +3,14 @@ import { Popover, Button } from '@moondreamsdev/dreamer-ui/components';
 import ThemeToggle from '@ui/ThemeToggle';
 import { NetworkBanner } from '@components/NetworkBanner';
 import { APP_TITLE, APP_ICON_PATH } from '@lib/app';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 
 const MENU_ITEM_CLASS =
 	'block w-full rounded-md px-2 py-1 text-left text-xs text-foreground/70 hover:bg-foreground/5';
 
 function UserMenu() {
 	const { user, profile, signInWithGoogle, signOutUser, loading } =
-		useAuthContext();
+		useAuth();
 	const navigate = useNavigate();
 
 	const isSignedIn = !!user && !user.isAnonymous;

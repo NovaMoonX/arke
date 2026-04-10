@@ -8,7 +8,7 @@ import {
 } from '@moondreamsdev/dreamer-ui/components';
 import { Trash } from '@moondreamsdev/dreamer-ui/symbols';
 import { useToast } from '@moondreamsdev/dreamer-ui/hooks';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 import { createCache } from '@lib/firebase/caches';
 import {
   validateFile,
@@ -66,7 +66,7 @@ function getItemLabel(item: CacheItem): string {
 
 export function CreateCache() {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading, needsProfile } = useAuthContext();
+  const { user, profile, loading: authLoading, needsProfile } = useAuth();
   const { addToast } = useToast();
 
   const [title, setTitle] = useState('');

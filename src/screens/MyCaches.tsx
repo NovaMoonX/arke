@@ -4,7 +4,7 @@ import { Button } from '@moondreamsdev/dreamer-ui/components';
 import { Trash } from '@moondreamsdev/dreamer-ui/symbols';
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 import { getUserCaches, deleteCache } from '@lib/firebase/caches';
 import { CachePromotion } from '@components/CachePromotion';
 import { ProfileSetup } from '@components/ProfileSetup';
@@ -33,7 +33,7 @@ function timeUntilExpiry(expiresAt: number): string {
 
 export function MyCaches() {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading, needsProfile } = useAuthContext();
+  const { user, profile, loading: authLoading, needsProfile } = useAuth();
   const { confirm } = useActionModal();
   const [caches, setCaches] = useState<Cache[]>([]);
   const [loading, setLoading] = useState(() => !!profile);

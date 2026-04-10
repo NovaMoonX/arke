@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Input, Callout } from '@moondreamsdev/dreamer-ui/components';
-import { useAuthContext } from '@hooks/useAuthContext';
+import { useAuth } from '@hooks/useAuth';
 
 export function ProfileSetup() {
-  const { user, completeProfile, error } = useAuthContext();
+  const { user, completeProfile, error } = useAuth();
   const [displayName, setDisplayName] = useState(
     user?.displayName || '',
   );

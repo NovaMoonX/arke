@@ -56,7 +56,7 @@ export function useSession(): UseSessionReturn {
   const presenceUnsubRef = useRef<Unsubscribe | null>(null);
   const sessionPinRef = useRef<string | null>(null);
 
-  // Authenticate anonymously
+  // Authenticate — use existing Google user if present, otherwise sign in anonymously
   useEffect(() => {
     if (!auth) {
       setAuthenticating(false);
@@ -68,18 +68,17 @@ export function useSession(): UseSessionReturn {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
         setUserId(user.uid);
-      }
-      setAuthenticating(false);
-    });
-
-    signInAnonymously(firebaseAuth).catch(() => {
-      // If initial sign-in fails, retry once after a short delay.
-      // This handles race conditions on fresh page loads (e.g. /join/:pin).
-      setTimeout(() => {
+        setAuthenticating(false);
+      } else {
+        // No user at all — sign in anonymously for session features
         signInAnonymously(firebaseAuth).catch(() => {
-          setAuthenticating(false);
+          setTimeout(() => {
+            signInAnonymously(firebaseAuth).catch(() => {
+              setAuthenticating(false);
+            });
+          }, 1000);
         });
-      }, 1000);
+      }
     });
 
     return () => unsubscribe();
