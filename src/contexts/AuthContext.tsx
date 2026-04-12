@@ -32,7 +32,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(existingProfile);
           setNeedsProfile(false);
         } else {
-          setNeedsProfile(true);
+          // Auto-create profile from Google account data
+          const displayName = firebaseUser.displayName?.trim() || '';
+          const newProfile: UserProfile = {
+            uid: firebaseUser.uid,
+            displayName,
+            email: firebaseUser.email || '',
+            photoURL: firebaseUser.photoURL || null,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          try {
+            await createUserProfile(newProfile);
+            setProfile(newProfile);
+            // Only prompt for name if Google didn't provide one
+            setNeedsProfile(!displayName);
+          } catch {
+            // Profile creation failed — treat as needing profile setup
+            setNeedsProfile(true);
+          }
         }
       } else {
         setUser(null);
@@ -55,17 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-
-      // Check for existing profile
-      const existingProfile = await getUserProfile(firebaseUser.uid);
-      if (existingProfile) {
-        setProfile(existingProfile);
-        setNeedsProfile(false);
-      } else {
-        setNeedsProfile(true);
-      }
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged handles profile lookup and creation
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign-in failed.';
       // Don't show error for user-cancelled popup

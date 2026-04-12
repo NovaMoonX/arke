@@ -29,7 +29,7 @@ function UserMenu() {
 		);
 	}
 
-	const initial = (profile?.displayName || user?.email || '?')[0].toUpperCase();
+	const initial = (profile?.displayName || user?.displayName || '?')[0].toUpperCase();
 
 	return (
 		<Popover

@@ -11,10 +11,10 @@ import { useNavigate } from 'react-router-dom';
 
 function Home() {
 	const { session } = useSessionContext();
-	const { user, profile } = useAuth();
+	const { user } = useAuth();
 	const navigate = useNavigate();
 
-	const isSignedIn = !!user && !user.isAnonymous && !!profile;
+	const isSignedIn = !!user && !user.isAnonymous;
 
 	if (session) {
 		return (

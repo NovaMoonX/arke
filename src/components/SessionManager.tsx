@@ -9,6 +9,7 @@ import {
 import { join } from '@moondreamsdev/dreamer-ui/utils';
 import { useActionModal } from '@moondreamsdev/dreamer-ui/hooks';
 import { useSessionContext } from '@hooks/useSessionContext';
+import { useAuth } from '@hooks/useAuth';
 import { QRDisplay } from '@components/QRDisplay';
 import { QRCodeIcon } from '@components/icons/QRCodeIcon';
 
@@ -34,8 +35,12 @@ export function SessionManager({ className }: SessionManagerProps) {
   } = useSessionContext();
 
   const { confirm } = useActionModal();
+  const { profile } = useAuth();
   const [pinInput, setPinInput] = useState('');
   const [showQR, setShowQR] = useState(false);
+
+  // Prefer authenticated user's profile displayName over device identity name
+  const displayName = profile?.displayName || deviceName;
 
   const handleCreateSession = async () => {
     await createSession();
@@ -98,7 +103,7 @@ export function SessionManager({ className }: SessionManagerProps) {
               aria-hidden='true'
             />
             <span className='text-xs font-medium' style={{ color: deviceColor }}>
-              {deviceName}
+              {displayName}
             </span>
 
             {/* Device count — clickable to show participants */}
