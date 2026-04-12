@@ -42,6 +42,31 @@ export const router = createBrowserRouter([
           return { Component: Join };
         },
       },
+      // Cache routes
+      {
+        path: 'cache',
+        HydrateFallback: Loading,
+        lazy: async () => {
+          const { default: MyCaches } = await import('@screens/MyCaches');
+          return { Component: MyCaches };
+        },
+      },
+      {
+        path: 'cache/new',
+        HydrateFallback: Loading,
+        lazy: async () => {
+          const { default: CreateCache } = await import('@screens/CreateCache');
+          return { Component: CreateCache };
+        },
+      },
+      {
+        path: 'cache/:cacheId',
+        HydrateFallback: Loading,
+        lazy: async () => {
+          const { default: ViewCache } = await import('@screens/ViewCache');
+          return { Component: ViewCache };
+        },
+      },
     ],
   },
 ]);
